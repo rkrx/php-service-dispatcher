@@ -46,15 +46,17 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @throws Exception
-	 * @return $this
+	 * @return int Number of sucessfully executed services
 	 */
 	public function run() {
 		$services = $this->attributeRepository->fetchServices();
+		$count = 0;
 		foreach($services as $service) {
 			$this->attributeRepository->markTry($service);
 			call_user_func($this->services[$service]);
 			$this->attributeRepository->markRun($service);
+			$count++;
 		}
-		return $this;
+		return $count;
 	}
 }
