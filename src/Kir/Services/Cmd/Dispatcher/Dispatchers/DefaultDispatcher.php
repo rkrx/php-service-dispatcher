@@ -53,7 +53,7 @@ class DefaultDispatcher implements Dispatcher {
 		$count = 0;
 		foreach($services as $service) {
 			$this->attributeRepository->markTry($service);
-			call_user_func($this->services[$service]);
+			call_user_func($this->services[$service], $service);
 			$this->attributeRepository->markRun($service);
 			$count++;
 		}
