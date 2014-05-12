@@ -28,7 +28,7 @@ class DefaultDispatcherTest extends PHPUnit_Framework_TestCase {
 			$list->push("b");
 		})->run();
 
-		$this->assertEquals('i:0;:s:1:"a";:s:1:"b";', $list->serialize());
+		$this->assertEquals('a,b', $this->buildString($list));
 	}
 
 	public function test2() {
@@ -47,7 +47,7 @@ class DefaultDispatcherTest extends PHPUnit_Framework_TestCase {
 			$list->push("b");
 		})->run();
 
-		$this->assertEquals('i:0;:s:1:"b";:s:1:"a";', $list->serialize());
+		$this->assertEquals('b,a', $this->buildString($list));
 	}
 
 	public function test3() {
@@ -66,7 +66,7 @@ class DefaultDispatcherTest extends PHPUnit_Framework_TestCase {
 			$list->push("b");
 		})->run();
 
-		$this->assertEquals('i:0;:s:1:"a";:s:1:"b";', $list->serialize());
+		$this->assertEquals('a,b', $this->buildString($list));
 	}
 
 	public function test4() {
@@ -85,7 +85,15 @@ class DefaultDispatcherTest extends PHPUnit_Framework_TestCase {
 			$list->push("b");
 		})->run();
 
-		$this->assertEquals('i:0;:s:1:"b";:s:1:"a";', $list->serialize());
+		$this->assertEquals('b,a', $this->buildString($list));
+	}
+
+	private function buildString(SplDoublyLinkedList $list) {
+		$result = array();
+		foreach($list as $entry) {
+			$result[] = $entry;
+		}
+		return join(',', $result);
 	}
 }
  
