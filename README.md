@@ -24,7 +24,8 @@ $dispatcher->register('service1', 3600, function () {
 
 The example above show the most simple usage of the service dispatcher. Two services get registered. "Service1" and
 "Service2". If one service throws an exception, the whole execution stops. Next time, the failed service starts at the
-end of the queue.
+end of the queue. If a service was successfully executed, the timeout schedules the service in this case to 1 hour
+(3600 seconds) in the future.
 
 Packagist
 ---------
