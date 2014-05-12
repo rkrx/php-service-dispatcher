@@ -1,0 +1,12 @@
+<phpunit bootstrap="vendor/autoload.php"
+		 backupGlobals="false"
+		 backupStaticAttributes="false"
+		 strict="true"
+		 verbose="true">
+	<testsuites>
+		<testsuite name="php-service-dispatcher">
+			<file>tests/Kir/Services/Cmd/Dispatcher/AttributeRepositories/XmlAttributeRepositoryTest.php</file>
+			<file>tests/Kir/Services/Cmd/Dispatcher/Dispatchers/DefaultDispatcherTest.php</file>
+		</testsuite>
+	</testsuites>
+</phpunit>
