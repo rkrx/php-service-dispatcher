@@ -50,12 +50,12 @@ class SqliteAttributeRepository implements AttributeRepository {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		$pdo->exec("CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);");
 
-		$this->selectServices = $pdo->prepare('SELECT service_key FROM services WHERE datetime(datetime("now"), "-"||service_timeout||" seconds") > service_last_run ORDER BY MAX(service_last_try, service_last_run) ASC;');
+		$this->selectServices = $pdo->prepare('SELECT service_key FROM services WHERE datetime(datetime(\'now\'), \'-\'||service_timeout||\' seconds\') > service_last_run ORDER BY MAX(service_last_try, service_last_run) ASC;');
 		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
 		$this->insertService = $pdo->prepare('INSERT INTO services (service_key, service_last_try, service_last_run, service_timeout) VALUES (:key, :try, :run, :timeout);');
 		$this->updateService = $pdo->prepare('UPDATE services SET service_timeout=:timeout WHERE service_key=:key;');
-		$this->updateTryDate = $pdo->prepare('UPDATE services SET service_last_try=datetime("now") WHERE service_key=:key;');
-		$this->updateRunDate = $pdo->prepare('UPDATE services SET service_last_run=datetime("now") WHERE service_key=:key;');
+		$this->updateTryDate = $pdo->prepare('UPDATE services SET service_last_try=datetime(\'now\') WHERE service_key=:key;');
+		$this->updateRunDate = $pdo->prepare('UPDATE services SET service_last_run=datetime(\'now\') WHERE service_key=:key;');
 		$this->pdo = $pdo;
 	}
 
