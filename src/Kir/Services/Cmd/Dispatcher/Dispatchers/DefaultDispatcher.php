@@ -20,16 +20,10 @@ class DefaultDispatcher implements Dispatcher {
 	private $services = array();
 
 	/**
-	 * @var ServiceSorter
-	 */
-	private $sorter = null;
-
-	/**
 	 * @param AttributeRepository $settings
 	 */
 	public function __construct(AttributeRepository $settings) {
 		$this->attributeRepository = $settings;
-		$this->sorter = new ServiceSorter();
 	}
 
 	/**
