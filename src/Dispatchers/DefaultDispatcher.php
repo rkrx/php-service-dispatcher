@@ -3,6 +3,7 @@ namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
 use DateTime;
 use Exception;
+use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
@@ -13,26 +14,31 @@ class DefaultDispatcher implements Dispatcher {
 	 * @var AttributeRepository
 	 */
 	private $attributeRepository = null;
-
 	/**
 	 * @var callable[]
 	 */
 	private $services = array();
+	/**
+	 * @var MethodInvoker
+	 */
+	private $methodInvoker;
 
 	/**
 	 * @param AttributeRepository $settings
+	 * @param MethodInvoker $methodInvoker
 	 */
-	public function __construct(AttributeRepository $settings) {
+	public function __construct(AttributeRepository $settings, MethodInvoker $methodInvoker = null) {
 		$this->attributeRepository = $settings;
+		$this->methodInvoker = $methodInvoker;
 	}
 
 	/**
 	 * @param string $key
 	 * @param int $interval
-	 * @param callable $callable
+	 * @param $callable
 	 * @return $this
 	 */
-	public function register($key, $interval, callable $callable) {
+	public function register($key, $interval, $callable) {
 		$this->attributeRepository->store($key, $interval);
 		$this->services[$key] = $callable;
 		return $this;
@@ -47,7 +53,11 @@ class DefaultDispatcher implements Dispatcher {
 		$count = 0;
 		foreach($services as $service) {
 			$this->attributeRepository->markTry($service);
-			call_user_func($this->services[$service], $service);
+			if($this->methodInvoker !== null) {
+				$this->methodInvoker->invoke($this->services[$service], array('serviceName' => $service));
+			} else {
+				call_user_func($this->services[$service], $service);
+			}
 			$this->attributeRepository->markRun($service);
 			$count++;
 		}

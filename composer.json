@@ -4,19 +4,20 @@
 	"prefer-stable": true,
 	"minimum-stability": "dev",
 	"require": {
-		"php": ">= 5.3"
+		"php": ">= 5.3",
+		"rkr/php-ioc-contract": "0.0.1"
 	},
 	"autoload": {
-		"psr-0": {
-			"Kir\\Services\\Cmd": "src/"
+		"psr-4": {
+			"Kir\\Services\\Cmd\\Dispatcher\\": "src/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Kir\\Services\\Cmd\\Dispatcher\\": ["src/", "tests/"]
 		}
 	},
 	"require-dev": {
 		"phpunit/phpunit": "~3.7"
-	},
-	"autoload-dev": {
-		"classmap": [
-			"tests/"
-		]
 	}
 }

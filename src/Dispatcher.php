@@ -7,10 +7,10 @@ interface Dispatcher {
 	/**
 	 * @param string $key
 	 * @param int $interval
-	 * @param callable $callable
+	 * @param $callable
 	 * @return $this
 	 */
-	public function register($key, $interval, callable $callable);
+	public function register($key, $interval, $callable);
 
 	/**
 	 * @throws Exception
