@@ -8,6 +8,8 @@ use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\ServiceSorter;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class DefaultDispatcher implements Dispatcher {
 	/**
@@ -22,14 +24,20 @@ class DefaultDispatcher implements Dispatcher {
 	 * @var MethodInvoker
 	 */
 	private $methodInvoker;
+	/**
+	 * @var LoggerInterface
+	 */
+	private $logger;
 
 	/**
 	 * @param AttributeRepository $settings
 	 * @param MethodInvoker $methodInvoker
+	 * @param LoggerInterface $logger
 	 */
-	public function __construct(AttributeRepository $settings, MethodInvoker $methodInvoker = null) {
+	public function __construct(AttributeRepository $settings, MethodInvoker $methodInvoker = null, LoggerInterface $logger = null) {
 		$this->attributeRepository = $settings;
 		$this->methodInvoker = $methodInvoker;
+		$this->logger = $logger !== null ? $logger : new NullLogger();
 	}
 
 	/**
@@ -52,14 +60,18 @@ class DefaultDispatcher implements Dispatcher {
 		$services = $this->attributeRepository->fetchServices();
 		$count = 0;
 		foreach($services as $service) {
-			$this->attributeRepository->markTry($service);
-			if($this->methodInvoker !== null) {
-				$this->methodInvoker->invoke($this->services[$service], array('serviceName' => $service));
-			} else {
-				call_user_func($this->services[$service], $service);
+			try {
+				$this->attributeRepository->markTry($service);
+				if($this->methodInvoker !== null) {
+					$this->methodInvoker->invoke($this->services[$service], array('serviceName' => $service));
+				} else {
+					call_user_func($this->services[$service], $service);
+				}
+				$this->attributeRepository->markRun($service);
+				$count++;
+			} catch (\Exception $e) {
+				$this->logger->critical($e->getMessage(), array('exception' => $e));
 			}
-			$this->attributeRepository->markRun($service);
-			$count++;
 		}
 		return $count;
 	}
