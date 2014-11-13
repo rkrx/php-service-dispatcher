@@ -6,7 +6,7 @@
 	"require": {
 		"php": ">= 5.3",
 		"psr/log": "~1.0",
-		"rkr/php-ioc-contract": "0.0.1"
+		"rkr/php-ioc-contract": "~0.0.1@stable"
 	},
 	"autoload": {
 		"psr-4": {
