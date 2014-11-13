@@ -1,15 +1,10 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
-use DateTime;
-use Exception;
 use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\ServiceSorter;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 class DefaultDispatcher implements Dispatcher {
 	/**
@@ -37,7 +32,7 @@ class DefaultDispatcher implements Dispatcher {
 	public function __construct(AttributeRepository $settings, MethodInvoker $methodInvoker = null, LoggerInterface $logger = null) {
 		$this->attributeRepository = $settings;
 		$this->methodInvoker = $methodInvoker;
-		$this->logger = $logger !== null ? $logger : new NullLogger();
+		$this->logger = $logger;
 	}
 
 	/**
@@ -53,7 +48,7 @@ class DefaultDispatcher implements Dispatcher {
 	}
 
 	/**
-	 * @throws Exception
+	 * @throws \Exception
 	 * @return int Number of sucessfully executed services
 	 */
 	public function run() {
@@ -70,7 +65,11 @@ class DefaultDispatcher implements Dispatcher {
 				$this->attributeRepository->markRun($service);
 				$count++;
 			} catch (\Exception $e) {
-				$this->logger->critical($e->getMessage(), array('exception' => $e));
+				if($this->logger !== null) {
+					$this->logger->critical($e->getMessage(), array('exception' => $e));
+				} else {
+					throw $e;
+				}
 			}
 		}
 		return $count;
