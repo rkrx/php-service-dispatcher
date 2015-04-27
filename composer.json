@@ -8,6 +8,9 @@
 		"psr/log": "~1.0",
 		"rkr/php-ioc-contract": "~0.0.1@stable"
 	},
+	"require-dev": {
+		"phpunit/phpunit": "~3.7"
+	},
 	"autoload": {
 		"psr-4": {
 			"Kir\\Services\\Cmd\\Dispatcher\\": "src/"
@@ -17,8 +20,5 @@
 		"psr-4": {
 			"Kir\\Services\\Cmd\\Dispatcher\\": ["src/", "tests/"]
 		}
-	},
-	"require-dev": {
-		"phpunit/phpunit": "~3.7"
 	}
 }
