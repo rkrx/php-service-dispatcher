@@ -1,5 +1,5 @@
 {
-	"name": "rkr/php-service-dispatcher",
+	"name": "rkr/service-dispatcher",
 	"license": "MIT",
 	"prefer-stable": true,
 	"minimum-stability": "dev",
