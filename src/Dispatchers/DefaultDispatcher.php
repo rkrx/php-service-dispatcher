@@ -18,7 +18,7 @@ class DefaultDispatcher implements Dispatcher {
 	private $logger;
 	/** @var array */
 	private $standardTimeouts = array();
-	/** @var callable[] */
+	/** @var array */
 	private $listeners = array();
 
 	/**
