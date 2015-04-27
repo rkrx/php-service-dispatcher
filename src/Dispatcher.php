@@ -18,7 +18,7 @@ interface Dispatcher {
 
 	/**
 	 * @throws Exception
-	 * @return $this
+	 * @return int Count of services successfully started
 	 */
 	public function run();
 } 
