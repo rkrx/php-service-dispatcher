@@ -2,6 +2,7 @@ php-service-dispatcher
 ======================
 
 [![Build Status](https://travis-ci.org/rkrx/php-service-dispatcher.svg)](https://travis-ci.org/rkrx/php-service-dispatcher)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/rkrx/php-service-dispatcher/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/rkrx/php-service-dispatcher/?branch=master)
 
 A simple service dispatcher for shell scripts
 
@@ -14,10 +15,10 @@ require_once 'vendor/autoload.php';
 $pdo = new PDO("sqlite:test.db");
 $repos = new SqliteAttributeRepository($pdo);
 $dispatcher = new DefaultDispatcher($repos);
-$dispatcher->register('service1', 3600, function () {
+$dispatcher->register('service1', Dispatcher::ONE_HOUR, function () {
 	// Do something
 	throw new Exception();
-})->register('service2', 3600, function () {
+})->register('service2', Dispatcher::ONE_HOUR * 3, function () {
 	// Do something
 })->run();
 ```
