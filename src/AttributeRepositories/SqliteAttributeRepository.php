@@ -8,39 +8,21 @@ use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 
 class SqliteAttributeRepository implements AttributeRepository {
-	/**
-	 * @var PDO
-	 */
+	/** @var PDO */
 	private $pdo = null;
-
-	/**
-	 * @var PDOStatement
-	 */
+	/** @var PDOStatement */
 	private $selectServices = null;
-
-	/**
-	 * @var PDOStatement
-	 */
+	/** @var PDOStatement */
 	private $hasService = null;
-
-	/**
-	 * @var PDOStatement
-	 */
+	/** @var PDOStatement */
 	private $insertService = null;
-
-	/**
-	 * @var PDOStatement
-	 */
+	/** @var PDOStatement */
 	private $updateService = null;
-
-	/**
-	 * @var PDOStatement
-	 */
+	/** @var PDOStatement */
+	private $updateTryDate = null;
+	/** @var PDOStatement */
 	private $updateRunDate = null;
-
-	/**
-	 * @var array
-	 */
+	/** @var array */
 	private $services = array();
 
 	/**

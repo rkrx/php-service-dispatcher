@@ -44,7 +44,7 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @throws \Exception
-	 * @return int Number of sucessfully executed services
+	 * @return int Number of successfully executed services
 	 */
 	public function run() {
 		$services = $this->attributeRepository->fetchServices();
