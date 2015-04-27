@@ -1,6 +1,7 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
+use Exception;
 use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
@@ -104,8 +105,12 @@ class DefaultDispatcher implements Dispatcher {
 	 */
 	private function fireEvent($event, $params) {
 		if(array_key_exists($event, $this->listeners)) {
-			foreach($this->listeners[$event] as $listener) {
-				$this->methodInvoker->invoke($listener, $params);
+			try {
+				foreach($this->listeners[$event] as $listener) {
+					$this->methodInvoker->invoke($listener, $params);
+				}
+			} catch (Exception $e) {
+				// Supress exceptions emitted by events
 			}
 		}
 	}
