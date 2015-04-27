@@ -1,8 +1,6 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher;
 
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
-
 interface AttributeRepository {
 	/**
 	 * @param string $key

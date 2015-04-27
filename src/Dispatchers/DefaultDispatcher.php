@@ -16,7 +16,7 @@ class DefaultDispatcher implements Dispatcher {
 	/** @var LoggerInterface */
 	private $logger;
 	/** @var array */
-	private $standardTimeouts = [];
+	private $standardTimeouts = array();
 
 	/**
 	 * @param AttributeRepository $settings
