@@ -111,6 +111,9 @@ class DefaultDispatcher implements Dispatcher {
 				}
 			} catch (Exception $e) {
 				// Supress exceptions emitted by events
+				if($this->logger !== null) {
+					$this->logger->critical($e->getMessage(), array('exception' => $e));
+				}
 			}
 		}
 	}
