@@ -17,6 +17,13 @@ interface Dispatcher {
 	public function register($key, $interval, $callable);
 
 	/**
+	 * @param string $event
+	 * @param callable $fn
+	 * @return $this
+	 */
+	public function on($event, $fn);
+
+	/**
 	 * @throws Exception
 	 * @return int Count of services successfully started
 	 */
