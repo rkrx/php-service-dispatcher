@@ -17,6 +17,8 @@ class DefaultDispatcher implements Dispatcher {
 	private $logger;
 	/** @var array */
 	private $standardTimeouts = array();
+	/** @var callable[] */
+	private $listeners = array();
 
 	/**
 	 * @param AttributeRepository $settings
@@ -43,6 +45,19 @@ class DefaultDispatcher implements Dispatcher {
 	}
 
 	/**
+	 * @param string $event
+	 * @param callable $fn
+	 * @return $this
+	 */
+	public function on($event, $fn) {
+		if(!array_key_exists($event, $this->listeners)) {
+			$this->listeners[$event] = array();
+		}
+		$this->listeners[$event][] = $fn;
+		return $this;
+	}
+
+	/**
 	 * @throws \Exception
 	 * @return int Number of successfully executed services
 	 */
@@ -50,24 +65,29 @@ class DefaultDispatcher implements Dispatcher {
 		$services = $this->attributeRepository->fetchServices();
 		$count = 0;
 		foreach($services as $service) {
+			if(array_key_exists($service, $this->standardTimeouts)) {
+				$standardTimeout = $this->standardTimeouts[$service];
+			} else {
+				$standardTimeout = 0;
+			}
+			$eventParams = array(
+				'serviceName' => $service,
+				'serviceTimeout' => $standardTimeout
+			);
 			try {
-				if(array_key_exists($service, $this->standardTimeouts)) {
-					$standardTimeout = $this->standardTimeouts[$service];
-				} else {
-					$standardTimeout = 0;
-				}
+				$this->fireEvent('service-start', $eventParams);
 				$this->attributeRepository->markTry($service);
 				if($this->methodInvoker !== null) {
-					$this->methodInvoker->invoke($this->services[$service], array(
-						'serviceName' => $service,
-						'serviceTimeout' => $standardTimeout
-					));
+					$this->methodInvoker->invoke($this->services[$service], $eventParams);
 				} else {
 					call_user_func($this->services[$service], $service);
 				}
 				$this->attributeRepository->markRun($service);
+				$this->fireEvent('service-success', $eventParams);
 				$count++;
 			} catch (\Exception $e) {
+				$eventParams['exception'] = $e;
+				$this->fireEvent('service-failure', $eventParams);
 				if($this->logger !== null) {
 					$this->logger->critical($e->getMessage(), array('exception' => $e));
 				} else {
@@ -76,5 +96,17 @@ class DefaultDispatcher implements Dispatcher {
 			}
 		}
 		return $count;
+	}
+
+	/**
+	 * @param string $event
+	 * @param array $params
+	 */
+	private function fireEvent($event, $params) {
+		if(array_key_exists($event, $this->listeners)) {
+			foreach($this->listeners[$event] as $listener) {
+				$this->methodInvoker->invoke($listener, $params);
+			}
+		}
 	}
 }
