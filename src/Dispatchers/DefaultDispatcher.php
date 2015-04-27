@@ -7,22 +7,16 @@ use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Psr\Log\LoggerInterface;
 
 class DefaultDispatcher implements Dispatcher {
-	/**
-	 * @var AttributeRepository
-	 */
+	/** @var AttributeRepository */
 	private $attributeRepository = null;
-	/**
-	 * @var callable[]
-	 */
+	/** @var callable[] */
 	private $services = array();
-	/**
-	 * @var MethodInvoker
-	 */
+	/** @var MethodInvoker */
 	private $methodInvoker;
-	/**
-	 * @var LoggerInterface
-	 */
+	/** @var LoggerInterface */
 	private $logger;
+	/** @var array */
+	private $standardTimeouts = [];
 
 	/**
 	 * @param AttributeRepository $settings
@@ -44,6 +38,7 @@ class DefaultDispatcher implements Dispatcher {
 	public function register($key, $interval, $callable) {
 		$this->attributeRepository->store($key, $interval);
 		$this->services[$key] = $callable;
+		$this->standardTimeouts[$key] = $interval;
 		return $this;
 	}
 
@@ -56,9 +51,17 @@ class DefaultDispatcher implements Dispatcher {
 		$count = 0;
 		foreach($services as $service) {
 			try {
+				if(array_key_exists($service, $this->standardTimeouts)) {
+					$standardTimeout = $this->standardTimeouts[$service];
+				} else {
+					$standardTimeout = 0;
+				}
 				$this->attributeRepository->markTry($service);
 				if($this->methodInvoker !== null) {
-					$this->methodInvoker->invoke($this->services[$service], array('serviceName' => $service));
+					$this->methodInvoker->invoke($this->services[$service], array(
+						'serviceName' => $service,
+						'serviceTimeout' => $standardTimeout
+					));
 				} else {
 					call_user_func($this->services[$service], $service);
 				}
