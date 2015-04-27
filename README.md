@@ -29,7 +29,3 @@ The example above show the most simple usage of the service dispatcher. Two serv
 "Service2". If one service throws an exception, the whole execution stops. Next time, the failed service starts at the
 end of the queue. If a service was successfully executed, the timeout schedules the service in this case to 1 hour
 (3600 seconds) in the future.
-
-Packagist
----------
-[https://packagist.org/packages/rkr/php-service-dispatcher](https://packagist.org/packages/rkr/php-service-dispatcher)
