@@ -66,6 +66,9 @@ class DefaultDispatcher implements Dispatcher {
 		$services = $this->attributeRepository->fetchServices();
 		$count = 0;
 		foreach($services as $service) {
+			if(!array_key_exists($service, $this->services)) {
+				continue;
+			}
 			if(array_key_exists($service, $this->standardTimeouts)) {
 				$standardTimeout = $this->standardTimeouts[$service];
 			} else {
