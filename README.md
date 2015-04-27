@@ -3,6 +3,8 @@ php-service-dispatcher
 
 [![Build Status](https://travis-ci.org/rkrx/php-service-dispatcher.svg)](https://travis-ci.org/rkrx/php-service-dispatcher)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/rkrx/php-service-dispatcher/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/rkrx/php-service-dispatcher/?branch=master)
+[![Latest Stable Version](https://poser.pugx.org/rkr/php-service-dispatcher/v/stable)](https://packagist.org/packages/rkr/php-service-dispatcher)
+[![License](https://poser.pugx.org/rkr/php-service-dispatcher/license)](https://packagist.org/packages/rkr/php-service-dispatcher)
 
 A simple service dispatcher for shell scripts
 
