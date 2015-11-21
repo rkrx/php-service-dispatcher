@@ -93,9 +93,9 @@ class DefaultDispatcher implements Dispatcher {
 				$eventParams['exception'] = $e;
 				$this->fireEvent('service-failure', $eventParams);
 				if($this->logger !== null) {
-					$this->logger->critical($e->getMessage(), array('exception' => $e));
+					$this->logger->critical("{$service}: {$e->getMessage()}", array('exception' => $e));
 				} else {
-					throw $e;
+					throw new Exception("{$service}: {$e->getMessage()}", $e->getCode(), $e);
 				}
 			}
 		}
