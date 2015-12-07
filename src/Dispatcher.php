@@ -10,7 +10,7 @@ interface Dispatcher {
 
 	/**
 	 * @param string $key
-	 * @param int $interval
+	 * @param string|int $interval
 	 * @param $callable
 	 * @return $this
 	 */
@@ -28,4 +28,4 @@ interface Dispatcher {
 	 * @return int Count of services successfully started
 	 */
 	public function run();
-} 
+}

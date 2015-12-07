@@ -3,6 +3,7 @@ namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
 use Exception;
 use Ioc\MethodInvoker;
+use Kir\Services\Cmd\Dispatcher\Common\IntervalParser;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Psr\Log\LoggerInterface;
@@ -34,11 +35,12 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @param string $key
-	 * @param int $interval
+	 * @param string|int $interval
 	 * @param $callable
 	 * @return $this
 	 */
 	public function register($key, $interval, $callable) {
+		$interval = IntervalParser::parse($interval);
 		$this->attributeRepository->store($key, $interval);
 		$this->services[$key] = $callable;
 		$this->standardTimeouts[$key] = $interval;
