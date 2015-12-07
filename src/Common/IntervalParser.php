@@ -10,7 +10,7 @@ class IntervalParser {
 	 */
 	public static function parse($interval) {
 		if(is_array($interval)) {
-			$result = [];
+			$result = array();
 			foreach($interval as $intervalStr) {
 				$result[] = self::parseString($intervalStr);
 			}
