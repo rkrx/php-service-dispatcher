@@ -23,6 +23,7 @@ class IntervalParser {
 	/**
 	 * @param int|string $interval
 	 * @return int
+	 * @throws Exception
 	 */
 	private static function parseString($interval) {
 		if(preg_match('/^\\d+$/', $interval)) {
@@ -31,12 +32,13 @@ class IntervalParser {
 		if(preg_match('/^(\\d{1,2}|\\*):(\\d{1,2}|\\*)(?::(\\d{1,2}|\\*))?$/', $interval, $matches)) {
 			$matches[] = 0;
 			list($hours, $minutes, $seconds) = array_slice($matches, 1);
-			$possibleDates = [
+			$possibleDates = array(
 				sprintf('today %02d:%02d:%02d', $hours, $minutes, $seconds),
 				sprintf('tomorrow %02d:%02d:%02d', $hours, $minutes, $seconds),
-			];
+			);
 			return self::nearst($possibleDates);
 		}
+		throw new Exception("Unrecognized time format: {$interval}");
 	}
 
 	/**
