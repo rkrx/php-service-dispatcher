@@ -97,7 +97,7 @@ class DefaultDispatcher implements Dispatcher {
 				if($this->logger !== null) {
 					$this->logger->critical("{$service}: {$e->getMessage()}", array('exception' => $e));
 				} else {
-					throw new Exception("{$service}: {$e->getMessage()}", $e->getCode(), $e);
+					throw new Exception("{$service}: {$e->getMessage()}", (int) $e->getCode(), $e);
 				}
 			}
 		}
