@@ -7,6 +7,7 @@ use Kir\Services\Cmd\Dispatcher\Common\IntervalParser;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 class DefaultDispatcher implements Dispatcher {
 	/** @var AttributeRepository */
@@ -61,7 +62,6 @@ class DefaultDispatcher implements Dispatcher {
 	}
 
 	/**
-	 * @throws \Exception
 	 * @return int Number of successfully executed services
 	 */
 	public function run() {
@@ -84,12 +84,14 @@ class DefaultDispatcher implements Dispatcher {
 				$this->fireEvent('service-start', $eventParams);
 				$this->attributeRepository->markTry($service);
 				if($this->methodInvoker !== null) {
-					$this->methodInvoker->invoke($this->services[$service], $eventParams);
+					$result = $this->methodInvoker->invoke($this->services[$service], $eventParams);
 				} else {
-					call_user_func($this->services[$service], $service);
+					$result = call_user_func($this->services[$service], $service);
 				}
 				$this->attributeRepository->markRun($service);
-				$this->fireEvent('service-success', $eventParams);
+				if($result !== false) {
+					$this->fireEvent('service-success', $eventParams);
+				}
 				$count++;
 			} catch (\Exception $e) {
 				$eventParams['exception'] = $e;
@@ -97,7 +99,7 @@ class DefaultDispatcher implements Dispatcher {
 				if($this->logger !== null) {
 					$this->logger->critical("{$service}: {$e->getMessage()}", array('exception' => $e));
 				} else {
-					throw new Exception("{$service}: {$e->getMessage()}", (int) $e->getCode(), $e);
+					throw new RuntimeException("{$service}: {$e->getMessage()}", (int) $e->getCode(), $e);
 				}
 			}
 		}
