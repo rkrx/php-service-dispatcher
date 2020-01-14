@@ -6,22 +6,24 @@ use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\Common\IntervalParser;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
+use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Throwable;
 
 class DefaultDispatcher implements Dispatcher {
 	/** @var AttributeRepository */
-	private $attributeRepository = null;
+	private $attributeRepository;
 	/** @var callable[] */
-	private $services = array();
+	private $services = [];
 	/** @var MethodInvoker */
 	private $methodInvoker;
 	/** @var LoggerInterface */
 	private $logger;
 	/** @var array */
-	private $standardTimeouts = array();
+	private $standardTimeouts = [];
 	/** @var array */
-	private $listeners = array();
+	private $listeners = [];
 
 	/**
 	 * @param AttributeRepository $settings
@@ -65,45 +67,39 @@ class DefaultDispatcher implements Dispatcher {
 	 * @return int Number of successfully executed services
 	 */
 	public function run() {
-		$services = $this->attributeRepository->fetchServices();
-		$count = 0;
-		foreach($services as $service) {
-			if(!array_key_exists($service, $this->services)) {
-				continue;
+		return $this->attributeRepository->lockAndIterateServices(function (Service $service) {
+			if(!array_key_exists($service->getKey(), $this->services)) {
+				return;
 			}
-			if(array_key_exists($service, $this->standardTimeouts)) {
-				$standardTimeout = $this->standardTimeouts[$service];
+			if(array_key_exists($service->getKey(), $this->standardTimeouts)) {
+				$standardTimeout = $this->standardTimeouts[$service->getKey()];
 			} else {
 				$standardTimeout = 0;
 			}
-			$eventParams = array(
+			$eventParams = [
 				'serviceName' => $service,
 				'serviceTimeout' => $standardTimeout
-			);
+			];
 			try {
 				$this->fireEvent('service-start', $eventParams);
-				$this->attributeRepository->markTry($service);
 				if($this->methodInvoker !== null) {
-					$result = $this->methodInvoker->invoke($this->services[$service], $eventParams);
+					$result = $this->methodInvoker->invoke($this->services[$service->getKey()], $eventParams);
 				} else {
-					$result = call_user_func($this->services[$service], $service);
+					$result = call_user_func($this->services[$service->getKey()], $service);
 				}
-				$this->attributeRepository->markRun($service);
 				if($result !== false) {
 					$this->fireEvent('service-success', $eventParams);
 				}
-				$count++;
-			} catch (\Exception $e) {
+			} catch (Throwable $e) {
 				$eventParams['exception'] = $e;
 				$this->fireEvent('service-failure', $eventParams);
 				if($this->logger !== null) {
-					$this->logger->critical("{$service}: {$e->getMessage()}", array('exception' => $e));
+					$this->logger->critical("{$service}: {$e->getMessage()}", ['exception' => $e]);
 				} else {
 					throw new RuntimeException("{$service}: {$e->getMessage()}", (int) $e->getCode(), $e);
 				}
 			}
-		}
-		return $count;
+		});
 	}
 
 	/**

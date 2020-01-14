@@ -8,21 +8,10 @@ interface AttributeRepository {
 	 * @return $this
 	 */
 	public function store($key, $timeout);
-
+	
 	/**
-	 * @param string $key
-	 * @return $this
+	 * @param callable $fn
+	 * @return int Successfully executed services
 	 */
-	public function markTry($key);
-
-	/**
-	 * @param string $key
-	 * @return $this
-	 */
-	public function markRun($key);
-
-	/**
-	 * @return string[]
-	 */
-	public function fetchServices();
+	public function lockAndIterateServices($fn);
 }

@@ -1,30 +1,32 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
+use Generator;
 use PDO;
-use Exception;
 use PDOStatement;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
+use RuntimeException;
+use Throwable;
 
 class MySQLAttributeRepository implements AttributeRepository {
-	/** @var PDO */
-	private $pdo = null;
 	/** @var PDOStatement */
-	private $selectServices = null;
+	private $selectServices;
 	/** @var PDOStatement */
-	private $hasService = null;
+	private $hasService;
 	/** @var PDOStatement */
-	private $insertService = null;
+	private $insertService;
 	/** @var PDOStatement */
-	private $updateService = null;
+	private $updateService;
 	/** @var PDOStatement */
-	private $updateTryDate = null;
+	private $updateTryDate;
 	/** @var PDOStatement */
-	private $updateRunDate = null;
+	private $updateRunDate;
 	/** @var array */
-	private $services = array();
-
+	private $services = [];
+	/** @var PDO */
+	private $pdo;
+	
 	/**
 	 * @param PDO $pdo
 	 * @param string $tableName
@@ -33,7 +35,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		$pdo->exec("CREATE TABLE IF NOT EXISTS `{$tableName}` (`service_key` VARCHAR(255) NOT NULL DEFAULT '', `service_last_try` DATETIME NULL DEFAULT '2000-01-01 00:00:00', `service_last_run` DATETIME NULL DEFAULT '2000-01-01 00:00:00', `service_timeout` INT UNSIGNED NULL DEFAULT '0', PRIMARY KEY (`service_key`));");
 
-		$this->selectServices = $pdo->prepare("SELECT service_key FROM `{$tableName}` WHERE DATE_ADD(service_last_run, INTERVAL service_timeout SECOND) <= NOW() ORDER BY GREATEST(service_last_try, service_last_run) ASC;");
+		$this->selectServices = $pdo->prepare("SELECT FOR UPDATE service_key FROM `{$tableName}` WHERE DATE_ADD(service_last_run, INTERVAL service_timeout SECOND) <= NOW() ORDER BY GREATEST(service_last_try, service_last_run) ASC;");
 		$this->hasService = $pdo->prepare("SELECT COUNT(*) FROM `{$tableName}` WHERE service_key=:key;");
 		$this->insertService = $pdo->prepare("INSERT INTO `{$tableName}` (service_key, service_last_try, service_last_run, service_timeout) VALUES (:key, :try, :run, :timeout);");
 		$this->updateService = $pdo->prepare("UPDATE `{$tableName}` SET service_timeout=:timeout WHERE service_key=:key;");
@@ -47,8 +49,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 * @return bool
 	 */
 	public function has($key) {
-		$this->hasService->bindValue('key', $key);
-		$this->hasService->execute();
+		$this->hasService->execute(['key' => $key]);
 		$count = $this->hasService->fetchColumn(0);
 		return $count > 0;
 	}
@@ -57,63 +58,61 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 * @param string $key
 	 * @param int $timeout
 	 * @param array $data
-	 * @throws Exception
 	 * @return $this
 	 */
-	public function store($key, $timeout, array $data = array()) {
+	public function store($key, $timeout, array $data = []) {
 		$key = trim(strtolower($key));
 		if(!in_array($key, $this->services)) {
 			$this->services[] = $key;
 		} else {
-			throw new Exception("Duplicate service: {$key}");
+			throw new RuntimeException("Duplicate service: {$key}");
 		}
 
 		if($this->has($key)) {
-			$this->updateService->bindValue('key', $key);
-			$this->updateService->bindValue('timeout', $timeout);
-			$this->updateService->execute();
+			$this->updateService->execute(['key' => $key, 'timeout' => $timeout]);
 		} else {
-			$this->insertService->bindValue('key', $key);
-			$this->insertService->bindValue('timeout', $timeout);
-			$this->insertService->bindValue('try', '2000-01-01 00:00:00');
-			$this->insertService->bindValue('run', '2000-01-01 00:00:00');
-			$this->insertService->execute();
+			$this->insertService->execute(['key' => $key, 'timeout' => $timeout, 'try' => '2000-01-01 00:00:00', 'run' => '2000-01-01 00:00:00']);
 		}
 
 		return $this;
 	}
-
+	
 	/**
-	 * @param string $key
-	 * @return $this
+	 * @param callable $fn
+	 * @return int
+	 * @throws Throwable
 	 */
-	public function markTry($key) {
-		$this->updateTryDate->bindValue('key', $key);
-		$this->updateTryDate->execute();
-		return $this;
+	public function lockAndIterateServices($fn) {
+		$count = 0;
+		$this->pdo->exec('START TRANSACTION');
+		try {
+			$services = $this->fetchServices();
+			foreach($services as $service) {
+				$this->updateTryDate->execute(['key' => $service['service_key']]);
+				$fn($service);
+				$this->updateRunDate->execute(['key' => $service['service_key']]);
+				$count++;
+			}
+			$this->pdo->exec('COMMIT');
+			return $count;
+		} catch(Throwable $e) {
+			$this->pdo->exec('ROLLBACK');
+			throw $e;
+		}
 	}
-
+	
 	/**
-	 * @param string $key
-	 * @return $this
+	 * @return Service[]|Generator
 	 */
-	public function markRun($key) {
-		$this->updateRunDate->bindValue('key', $key);
-		$this->updateRunDate->execute();
-		return $this;
-	}
-
-	/**
-	 * @return Service[]
-	 */
-	public function fetchServices() {
+	private function fetchServices() {
 		$this->selectServices->execute();
-		$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
-		$result = array();
-		foreach($services as $service) {
-			$result[] = $service['service_key'];
+		try {
+			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
+			foreach($services as $service) {
+				yield new Service($service['service_key']);
+			}
+		} finally {
+			$this->selectServices->closeCursor();
 		}
-		$this->selectServices->closeCursor();
-		return $result;
 	}
 }

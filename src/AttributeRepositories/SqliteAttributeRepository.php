@@ -1,36 +1,38 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
+use Generator;
 use PDO;
-use Exception;
 use PDOStatement;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
+use RuntimeException;
+use Throwable;
 
 class SqliteAttributeRepository implements AttributeRepository {
 	/** @var PDO */
-	private $pdo = null;
+	private $pdo;
 	/** @var PDOStatement */
-	private $selectServices = null;
+	private $selectServices;
 	/** @var PDOStatement */
-	private $hasService = null;
+	private $hasService;
 	/** @var PDOStatement */
-	private $insertService = null;
+	private $insertService;
 	/** @var PDOStatement */
-	private $updateService = null;
+	private $updateService;
 	/** @var PDOStatement */
-	private $updateTryDate = null;
+	private $updateTryDate;
 	/** @var PDOStatement */
-	private $updateRunDate = null;
+	private $updateRunDate;
 	/** @var array */
-	private $services = array();
+	private $services = [];
 
 	/**
 	 * @param PDO $pdo
 	 */
 	public function __construct(PDO $pdo) {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		$pdo->exec("CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);");
+		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
 
 		$this->selectServices = $pdo->prepare('SELECT service_key FROM services WHERE datetime(datetime(\'now\'), \'-\'||service_timeout||\' seconds\') > service_last_run ORDER BY MAX(service_last_try, service_last_run) ASC;');
 		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
@@ -46,73 +48,74 @@ class SqliteAttributeRepository implements AttributeRepository {
 	 * @return bool
 	 */
 	public function has($key) {
-		$this->hasService->bindValue('key', $key);
-		$this->hasService->execute();
-		$count = $this->hasService->fetchColumn(0);
-		return $count > 0;
+		try {
+			$this->hasService->execute(['key' => $key]);
+			$count = $this->hasService->fetchColumn(0);
+			return $count > 0;
+		} finally {
+			$this->hasService->closeCursor();
+		}
 	}
 
 	/**
 	 * @param string $key
 	 * @param int $timeout
 	 * @param array $data
-	 * @throws Exception
 	 * @return $this
 	 */
-	public function store($key, $timeout, array $data = array()) {
+	public function store($key, $timeout, array $data = []) {
 		$key = trim(strtolower($key));
 		if(!in_array($key, $this->services)) {
 			$this->services[] = $key;
 		} else {
-			throw new Exception("Duplicate service: {$key}");
+			throw new RuntimeException("Duplicate service: {$key}");
 		}
 
 		if($this->has($key)) {
-			$this->updateService->bindValue('key', $key);
-			$this->updateService->bindValue('timeout', $timeout);
-			$this->updateService->execute();
+			$this->updateService->execute(['key' => $key, 'timeout' => $timeout]);
 		} else {
-			$this->insertService->bindValue('key', $key);
-			$this->insertService->bindValue('timeout', $timeout);
-			$this->insertService->bindValue('try', '2000-01-01 00:00:00');
-			$this->insertService->bindValue('run', '2000-01-01 00:00:00');
-			$this->insertService->execute();
+			$this->insertService->execute(['key' => $key, 'timeout' => $timeout, 'try' => '2000-01-01 00:00:00', 'run' => '2000-01-01 00:00:00']);
 		}
 
 		return $this;
 	}
-
+	
 	/**
-	 * @param string $key
-	 * @return $this
+	 * @param callable $fn
+	 * @return int
+	 * @throws Throwable
 	 */
-	public function markTry($key) {
-		$this->updateTryDate->bindValue('key', $key);
-		$this->updateTryDate->execute();
-		return $this;
+	public function lockAndIterateServices($fn) {
+		$count = 0;
+		$this->pdo->exec('BEGIN EXCLUSIVE TRANSACTION');
+		try {
+			$services = $this->fetchServices();
+			foreach($services as $service) {
+				$this->updateTryDate->execute(['key' => $service->getKey()]);
+				$fn($service);
+				$this->updateRunDate->execute(['key' => $service->getKey()]);
+				$count++;
+			}
+			$this->pdo->exec('COMMIT');
+			return $count;
+		} catch(Throwable $e) {
+			$this->pdo->exec('ROLLBACK');
+			throw $e;
+		}
 	}
 
 	/**
-	 * @param string $key
-	 * @return $this
-	 */
-	public function markRun($key) {
-		$this->updateRunDate->bindValue('key', $key);
-		$this->updateRunDate->execute();
-		return $this;
-	}
-
-	/**
-	 * @return Service[]
+	 * @return Service[]|Generator
 	 */
 	public function fetchServices() {
 		$this->selectServices->execute();
-		$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
-		$result = array();
-		foreach($services as $service) {
-			$result[] = $service['service_key'];
+		try {
+			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
+			foreach($services as $service) {
+				yield new Service($service['service_key']);
+			}
+		} finally {
+			$this->selectServices->closeCursor();
 		}
-		$this->selectServices->closeCursor();
-		return $result;
 	}
 }

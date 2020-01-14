@@ -4,7 +4,8 @@
 	"prefer-stable": true,
 	"minimum-stability": "dev",
 	"require": {
-		"php": ">= 5.3",
+		"php": ">= 7.0",
+		"ext-pdo": "*",
 		"psr/log": "~1.0",
 		"rkr/php-ioc-contract": "~0.1@stable"
 	},

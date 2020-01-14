@@ -1,78 +1,28 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 
-use DateTimeZone;
-use Kir\Services\Cmd\Dispatcher\Attributes;
-
 class Service {
-	/**
-	 * @var callable
-	 */
-	private $callback;
-
-	/**
-	 * @var int
-	 */
-	private $interval;
-
-	/**
-	 * @var string
-	 */
+	/** @var string */
 	private $key;
-
+	
 	/**
-	 * @var Attributes
+	 * @param string $key
 	 */
-	private $setting;
-
-	/**
-	 * @param $key
-	 * @param $interval
-	 * @param callable $callback
-	 * @param Attributes $setting
-	 */
-	public function __construct($key, $interval, callable $callback, Attributes $setting) {
-		$this->callback = $callback;
-		$this->interval = $interval;
+	public function __construct(string $key) {
 		$this->key = $key;
-		$this->setting = $setting;
 	}
-
-	/**
-	 * @return bool
-	 */
-	public function isActive() {
-		$lastRunTime = clone $this->getAttributes()->getLastRunTime();
-		$lastRunTime->modify("+{$this->interval} seconds");
-		$lastRunTime->setTimezone(new DateTimeZone('UTC'));
-		return ;
-	}
-
-	/**
-	 * @return callable
-	 */
-	public function getCallback() {
-		return $this->callback;
-	}
-
-	/**
-	 * @return int
-	 */
-	public function getInterval() {
-		return $this->interval;
-	}
-
+	
 	/**
 	 * @return string
 	 */
-	public function getKey() {
+	public function getKey(): string {
 		return $this->key;
 	}
-
+	
 	/**
-	 * @return Attributes
+	 * @return string
 	 */
-	public function getAttributes() {
-		return $this->setting;
+	public function __toString(): string {
+		return $this->key;
 	}
 }
