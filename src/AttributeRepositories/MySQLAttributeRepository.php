@@ -30,12 +30,18 @@ class MySQLAttributeRepository implements AttributeRepository {
 	/**
 	 * @param PDO $pdo
 	 * @param string $tableName
+	 * @param array $options
 	 */
-	public function __construct(PDO $pdo, $tableName = 'services') {
+	public function __construct(PDO $pdo, $tableName = 'services', array $options = []) {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		$pdo->exec("CREATE TABLE IF NOT EXISTS `{$tableName}` (`service_key` VARCHAR(255) NOT NULL DEFAULT '', `service_last_try` DATETIME NULL DEFAULT '2000-01-01 00:00:00', `service_last_run` DATETIME NULL DEFAULT '2000-01-01 00:00:00', `service_timeout` INT UNSIGNED NULL DEFAULT '0', PRIMARY KEY (`service_key`));");
-
-		$this->selectServices = $pdo->prepare("SELECT service_key FROM `{$tableName}` WHERE DATE_ADD(service_last_run, INTERVAL service_timeout SECOND) <= NOW() ORDER BY GREATEST(service_last_try, service_last_run) ASC FOR UPDATE SKIP LOCKED;");
+		
+		$skipLocked = '';
+		if($options['skip-locked'] ?? false) {
+			$skipLocked = ' SKIP LOCKED';
+		}
+		$this->selectServices = $pdo->prepare("SELECT service_key FROM `{$tableName}` WHERE DATE_ADD(service_last_run, INTERVAL service_timeout SECOND) <= NOW() ORDER BY GREATEST(service_last_try, service_last_run) ASC FOR UPDATE{$skipLocked};");
+		
 		$this->hasService = $pdo->prepare("SELECT COUNT(*) FROM `{$tableName}` WHERE service_key=:key;");
 		$this->insertService = $pdo->prepare("INSERT INTO `{$tableName}` (service_key, service_last_try, service_last_run, service_timeout) VALUES (:key, :try, :run, :timeout);");
 		$this->updateService = $pdo->prepare("UPDATE `{$tableName}` SET service_timeout=:timeout WHERE service_key=:key;");
