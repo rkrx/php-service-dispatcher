@@ -90,21 +90,22 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 */
 	public function lockAndIterateServices($fn) {
 		$count = 0;
-		$this->pdo->exec('START TRANSACTION');
-		try {
-			$services = $this->fetchServices();
-			foreach($services as $service) {
-				$this->updateTryDate->execute(['key' => $service->getKey()]);
+		$services = $this->fetchServices();
+		foreach($services as $service) {
+			$this->updateTryDate->execute(['key' => $service->getKey()]);
+			$this->pdo->exec('START TRANSACTION');
+			try {
+				$this->updateTryDate->execute(['key' => $service->getKey()]); // Again to lock the row
 				$fn($service);
 				$this->updateRunDate->execute(['key' => $service->getKey()]);
 				$count++;
+				$this->pdo->exec('COMMIT');
+			} catch(Throwable $e) {
+				$this->pdo->exec('ROLLBACK');
+				throw $e;
 			}
-			$this->pdo->exec('COMMIT');
-			return $count;
-		} catch(Throwable $e) {
-			$this->pdo->exec('ROLLBACK');
-			throw $e;
 		}
+		return $count;
 	}
 	
 	/**
