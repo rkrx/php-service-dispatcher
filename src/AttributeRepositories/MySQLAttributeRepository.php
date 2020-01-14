@@ -94,9 +94,9 @@ class MySQLAttributeRepository implements AttributeRepository {
 		try {
 			$services = $this->fetchServices();
 			foreach($services as $service) {
-				$this->updateTryDate->execute(['key' => $service['service_key']]);
+				$this->updateTryDate->execute(['key' => $service->getKey()]);
 				$fn($service);
-				$this->updateRunDate->execute(['key' => $service['service_key']]);
+				$this->updateRunDate->execute(['key' => $service->getKey()]);
 				$count++;
 			}
 			$this->pdo->exec('COMMIT');
