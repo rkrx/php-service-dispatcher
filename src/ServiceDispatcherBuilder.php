@@ -1,7 +1,6 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher;
 
-use Kir\Services\Cmd\Dispatcher\AttributeRepositories\MySQLAttributeRepository;
 use Kir\Services\Cmd\Dispatcher\AttributeRepositories\SqliteAttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Builder\MySQLBuilder;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
@@ -13,8 +12,7 @@ class ServiceDispatcherBuilder {
 		return new DefaultDispatcher($repos);
 	}
 	
-	public static function withMySQL(PDO $pdo, array $options): MySQLBuilder {
-		$repos = new MySQLAttributeRepository($pdo);
-		return new DefaultDispatcher($repos);
+	public static function withMySQL(PDO $pdo): MySQLBuilder {
+		return new MySQLBuilder($pdo);
 	}
 }
