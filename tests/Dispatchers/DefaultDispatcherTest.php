@@ -1,98 +1,99 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
-use DateTime;
-use Exception;
 use Kir\Services\Cmd\Dispatcher\AttributeRepositories\SqliteAttributeRepository;
-use Kir\Services\Cmd\Dispatcher\AttributeRepositories\XmlAttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Common\CommonAttributes;
 use PDO;
-use PHPUnit_Framework_TestCase;
-use SplDoublyLinkedList;
+use PHPUnit\Framework\TestCase;
 
-class DefaultDispatcherTest extends PHPUnit_Framework_TestCase {
+class DefaultDispatcherTest extends TestCase {
 	public function test1() {
 		$pdo = new PDO('sqlite::memory:');
-		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service1", "2000-01-01", "2000-01-01")');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service2", "2001-01-01", "2000-01-01")');
-
-		$list = new SplDoublyLinkedList();
+		$data = (object) ['list' => []];
 
 		$repos = new SqliteAttributeRepository($pdo);
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service1", "2000-01-01", "2000-01-01", "2000-01-01")');
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service2", "2001-01-01", "2000-01-01", "2000-01-01")');
+		
 		$dispatcher = new DefaultDispatcher($repos);
-		$dispatcher->register('service1', 3600, static function () use ($list) {
-			$list->push('a');
-		})->register('service2', 3600, static function () use ($list) {
-			$list->push('b');
+		$dispatcher->register('service1', '03:00', static function () use ($data) {
+			$data->list[] = 'a';
+		})->register('service2', '06:00', static function () use ($data) {
+			$data->list[] = 'b';
 		})->run();
 
-		$this->assertEquals('a,b', $this->buildString($list));
+		self::assertEquals(['a', 'b'], $data->list);
+		
+		$nextRunValues = $pdo->query('SELECT service_key, service_next_run FROM services')->fetchAll(PDO::FETCH_KEY_PAIR);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T03:00:00$/', $nextRunValues['service1'] ?? null);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T06:00:00$/', $nextRunValues['service2'] ?? null);
 	}
 
 	public function test2() {
 		$pdo = new PDO('sqlite::memory:');
-		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service1", "2001-01-01", "2000-01-01")');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service2", "2000-01-01", "2000-01-01")');
-
-		$list = new SplDoublyLinkedList();
+		$data = (object) ['list' => []];
 
 		$repos = new SqliteAttributeRepository($pdo);
+		
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service1", "2001-01-01", "2000-01-01", "2000-01-01")');
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service2", "2000-01-01", "2000-01-01", "2000-01-01")');
+		
 		$dispatcher = new DefaultDispatcher($repos);
-		$dispatcher->register('service1', 3600, static function () use ($list) {
-			$list->push('a');
-		})->register('service2', 3600, static function () use ($list) {
-			$list->push('b');
+		$dispatcher->register('service1', '03:00', static function () use ($data) {
+			$data->list[] = 'a';
+		})->register('service2', '06:00', static function () use ($data) {
+			$data->list[] = 'b';
 		})->run();
 
-		$this->assertEquals('b,a', $this->buildString($list));
+		self::assertEquals(['b', 'a'], $data->list);
+
+		$nextRunValues = $pdo->query('SELECT service_key, service_next_run FROM services')->fetchAll(PDO::FETCH_KEY_PAIR);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T03:00:00$/', $nextRunValues['service1'] ?? null);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T06:00:00$/', $nextRunValues['service2'] ?? null);
 	}
 
 	public function test3() {
 		$pdo = new PDO('sqlite::memory:');
-		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service1", "2000-01-01", "2000-01-01")');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service2", "2000-01-01", "2001-01-01")');
-
-		$list = new SplDoublyLinkedList();
+		$data = (object) ['list' => []];
 
 		$repos = new SqliteAttributeRepository($pdo);
+		
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service1", "2000-01-01", "2000-01-01", "2000-01-01")');
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service2", "2000-01-01", "2001-01-01", "2001-01-01")');
+		
 		$dispatcher = new DefaultDispatcher($repos);
-		$dispatcher->register('service1', 3600, static function () use ($list) {
-			$list->push('a');
-		})->register('service2', 3600, static function () use ($list) {
-			$list->push('b');
+		$dispatcher->register('service1', '03:00', static function () use ($data) {
+			$data->list[] = 'a';
+		})->register('service2', '06:00', static function () use ($data) {
+			$data->list[] = 'b';
 		})->run();
 
-		$this->assertEquals('a,b', $this->buildString($list));
+		self::assertEquals(['a', 'b'], $data->list);
+		
+		$nextRunValues = $pdo->query('SELECT service_key, service_next_run FROM services')->fetchAll(PDO::FETCH_KEY_PAIR);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T03:00:00$/', $nextRunValues['service1'] ?? null);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T06:00:00$/', $nextRunValues['service2'] ?? null);
 	}
 
 	public function test4() {
 		$pdo = new PDO('sqlite::memory:');
-		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service1", "2000-01-01", "2001-01-01")');
-		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run) VALUES ("service2", "2000-01-01", "2000-01-01")');
-
-		$list = new SplDoublyLinkedList();
+		$data = (object) ['list' => []];
 
 		$repos = new SqliteAttributeRepository($pdo);
+		
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service1", "2000-01-01", "2001-01-01", "2001-01-01")');
+		$pdo->exec('INSERT INTO services (service_key, service_last_try, service_last_run, service_next_run) VALUES ("service2", "2000-01-01", "2000-01-01", "2000-01-01")');
+		
 		$dispatcher = new DefaultDispatcher($repos);
-		$dispatcher->register('service1', 3600, static function () use ($list) {
-			$list->push('a');
-		})->register('service2', 3600, static function () use ($list) {
-			$list->push('b');
+		$dispatcher->register('service1', '03:00', static function () use ($data) {
+			$data->list[] = 'a';
+		})->register('service2', '06:00', static function () use ($data) {
+			$data->list[] = 'b';
 		})->run();
 
-		$this->assertEquals('b,a', $this->buildString($list));
-	}
-
-	private function buildString(SplDoublyLinkedList $list) {
-		$result = [];
-		foreach($list as $entry) {
-			$result[] = $entry;
-		}
-		return implode(',', $result);
+		self::assertEquals(['b', 'a'], $data->list);
+		
+		$nextRunValues = $pdo->query('SELECT service_key, service_next_run FROM services')->fetchAll(PDO::FETCH_KEY_PAIR);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T03:00:00$/', $nextRunValues['service1'] ?? null);
+		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T06:00:00$/', $nextRunValues['service2'] ?? null);
 	}
 }
- 

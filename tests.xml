@@ -5,8 +5,7 @@
 		 verbose="true">
 	<testsuites>
 		<testsuite name="php-service-dispatcher">
-			<file>tests/AttributeRepositories/XmlAttributeRepositoryTest.php</file>
-			<file>tests/Dispatchers/DefaultDispatcherTest.php</file>
+			<directory>tests</directory>
 		</testsuite>
 	</testsuites>
 </phpunit>

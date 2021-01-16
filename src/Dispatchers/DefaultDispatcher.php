@@ -1,6 +1,7 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
+use DateTimeInterface;
 use Exception;
 use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\Common\IntervalParser;
@@ -14,24 +15,22 @@ use Throwable;
 class DefaultDispatcher implements Dispatcher {
 	/** @var AttributeRepository */
 	private $attributeRepository;
-	/** @var callable[] */
+	/** @var object[] */
 	private $services = [];
 	/** @var MethodInvoker */
 	private $methodInvoker;
 	/** @var LoggerInterface */
 	private $logger;
 	/** @var array */
-	private $standardTimeouts = [];
-	/** @var array */
 	private $listeners = [];
-
+	
 	/**
-	 * @param AttributeRepository $settings
-	 * @param MethodInvoker $methodInvoker
-	 * @param LoggerInterface $logger
+	 * @param AttributeRepository $attributeRepository
+	 * @param MethodInvoker|null $methodInvoker
+	 * @param LoggerInterface|null $logger
 	 */
-	public function __construct(AttributeRepository $settings, MethodInvoker $methodInvoker = null, LoggerInterface $logger = null) {
-		$this->attributeRepository = $settings;
+	public function __construct(AttributeRepository $attributeRepository, MethodInvoker $methodInvoker = null, LoggerInterface $logger = null) {
+		$this->attributeRepository = $attributeRepository;
 		$this->methodInvoker = $methodInvoker;
 		$this->logger = $logger;
 	}
@@ -39,14 +38,16 @@ class DefaultDispatcher implements Dispatcher {
 	/**
 	 * @param string $key
 	 * @param string|int $interval
-	 * @param $callable
+	 * @param callable $callable
 	 * @return $this
 	 */
-	public function register($key, $interval, $callable) {
-		$interval = IntervalParser::parse($interval);
-		$this->attributeRepository->store($key, $interval);
-		$this->services[$key] = $callable;
-		$this->standardTimeouts[$key] = $interval;
+	public function register(string $key, $interval, callable $callable) {
+		$this->attributeRepository->register($key);
+		$this->services[$key] = (object) [
+			'fn' => $callable,
+			'key' => $key,
+			'interval' => $interval
+		];
 		return $this;
 	}
 
@@ -55,38 +56,37 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param callable $fn
 	 * @return $this
 	 */
-	public function on($event, $fn) {
+	public function on(string $event, callable $fn) {
 		if(!array_key_exists($event, $this->listeners)) {
-			$this->listeners[$event] = array();
+			$this->listeners[$event] = [];
 		}
 		$this->listeners[$event][] = $fn;
 		return $this;
 	}
 
 	/**
+	 * @param DateTimeInterface|null $now
 	 * @return int Number of successfully executed services
 	 */
-	public function run() {
-		return $this->attributeRepository->lockAndIterateServices(function (Service $service) {
+	public function run(DateTimeInterface $now = null) {
+		$now = $now ?? date_create_immutable();
+		return $this->attributeRepository->lockAndIterateServices($now, function (Service $service) {
 			if(!array_key_exists($service->getKey(), $this->services)) {
 				return;
 			}
-			if(array_key_exists($service->getKey(), $this->standardTimeouts)) {
-				$standardTimeout = $this->standardTimeouts[$service->getKey()];
-			} else {
-				$standardTimeout = 0;
-			}
-			$eventParams = [
-				'serviceName' => $service,
-				'serviceTimeout' => $standardTimeout
-			];
+			$eventParams = ['serviceName' => $service->getKey()];
 			try {
 				$this->fireEvent('service-start', $eventParams);
+				$serviceData = $this->services[$service->getKey()];
+				$this->attributeRepository->setLastTryDate($service->getKey(), date_create_immutable());
 				if($this->methodInvoker !== null) {
-					$result = $this->methodInvoker->invoke($this->services[$service->getKey()], $eventParams);
+					$result = $this->methodInvoker->invoke($serviceData->fn, $eventParams);
 				} else {
-					$result = call_user_func($this->services[$service->getKey()], $service);
+					$result = call_user_func($serviceData->fn, $service);
 				}
+				$this->attributeRepository->setLastRunDate($service->getKey(), date_create_immutable());
+				$nextRunDate = IntervalParser::getNext($serviceData->interval);
+				$this->attributeRepository->setNextRunDate($serviceData->key, $nextRunDate);
 				if($result !== false) {
 					$this->fireEvent('service-success', $eventParams);
 				}

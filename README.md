@@ -6,26 +6,50 @@ php-service-dispatcher
 [![Latest Stable Version](https://poser.pugx.org/rkr/service-dispatcher/v/stable)](https://packagist.org/packages/rkr/service-dispatcher)
 [![License](https://poser.pugx.org/rkr/service-dispatcher/license)](https://packagist.org/packages/rkr/service-dispatcher)
 
-A simple service dispatcher for shell scripts
+## Common usage using SQLite
+
+A simple service dispatcher for shell scripts. The intent is to run a php shell script every minute and let the script decide, what to run at what time...
 
 ```PHP
-use Kir\Services\Cmd\Dispatcher\AttributeRepositories\SqliteAttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
+use Kir\Services\Cmd\Dispatcher\Dispatcher;
 
-require_once 'vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
-$pdo = new PDO("sqlite:test.db");
-$repos = new SqliteAttributeRepository($pdo);
-$dispatcher = new DefaultDispatcher($repos);
+use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
+
+$dispatcher = ServiceDispatcherBuilder::withSQLite(__DIR__.'/services.db');
+
 $dispatcher->register('service1', Dispatcher::ONE_HOUR, function () {
 	// Do something
 	throw new Exception();
-})->register('service2', Dispatcher::ONE_HOUR * 3, function () {
+});
+
+$dispatcher->register('service2', Dispatcher::ONE_HOUR * 3, function () {
 	// Do something
-})->run();
+});
+
+$dispatcher->run();
 ```
 
 The example above show the most simple usage of the service dispatcher. Two services get registered. "Service1" and
 "Service2". If one service throws an exception, the whole execution stops. Next time, the failed service starts at the
 end of the queue. If a service was successfully executed, the timeout schedules the service in this case to 1 hour
 (3600 seconds) in the future.
+
+## MySQL-Specific settings:
+
+```PHP
+use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
+
+require __DIR__ . '/vendor/autoload.php';
+
+/* ...  */
+
+$dispatcher = ServiceDispatcherBuilder::withMySQL($pdo)
+->useLocking(true)
+->setLockPrefix('my-app:');
+
+$dispatcher->register(/*...*/);
+
+/* ...  */
+```

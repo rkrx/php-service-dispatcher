@@ -1,53 +1,60 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
+use DateTimeInterface;
 use Generator;
 use PDO;
 use PDOStatement;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use RuntimeException;
-use Throwable;
 
 class SqliteAttributeRepository implements AttributeRepository {
+	private const SQLITE_DATETIME_FORMAT = 'Y-m-d\\TH:i:s';
+	
 	/** @var PDO */
 	private $pdo;
+	/** @var PDOStatement */
+	private $registerRow = null;
 	/** @var PDOStatement */
 	private $selectServices;
 	/** @var PDOStatement */
 	private $hasService;
 	/** @var PDOStatement */
+	private $getData;
+	/** @var PDOStatement */
 	private $insertService;
 	/** @var PDOStatement */
-	private $updateService;
+	private $setNextRun;
 	/** @var PDOStatement */
-	private $updateTryDate;
+	private $setTryDate;
 	/** @var PDOStatement */
-	private $updateRunDate;
-	/** @var array */
-	private $services = [];
+	private $setLastRun;
 
 	/**
 	 * @param PDO $pdo
 	 */
 	public function __construct(PDO $pdo) {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		$pdo->exec('CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_timeout INTEGER);');
-
-		$this->selectServices = $pdo->prepare('SELECT service_key FROM services WHERE datetime(datetime(\'now\'), \'-\'||service_timeout||\' seconds\') > service_last_run ORDER BY MAX(service_last_try, service_last_run) ASC;');
-		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
-		$this->insertService = $pdo->prepare('INSERT INTO services (service_key, service_last_try, service_last_run, service_timeout) VALUES (:key, :try, :run, :timeout);');
-		$this->updateService = $pdo->prepare('UPDATE services SET service_timeout=:timeout WHERE service_key=:key;');
-		$this->updateTryDate = $pdo->prepare('UPDATE services SET service_last_try=datetime(\'now\') WHERE service_key=:key;');
-		$this->updateRunDate = $pdo->prepare('UPDATE services SET service_last_run=datetime(\'now\') WHERE service_key=:key;');
 		$this->pdo = $pdo;
+		
+		// https://stackoverflow.com/a/8442173
+		$this->migrate(1, 'CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_next_run DATETIME);');
+		
+		$this->selectServices = $pdo->prepare("SELECT service_key, service_last_try, service_last_run FROM services WHERE service_next_run IS NULL OR DATETIME(service_next_run) <= DATETIME(:dt) ORDER BY MAX(service_last_try, service_last_run);");
+		$this->registerRow = $pdo->prepare('INSERT OR IGNORE INTO services (service_key) VALUES (:key);');
+		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
+		$this->getData = $pdo->prepare('SELECT service_key, service_last_try, service_last_run, service_next_run FROM services WHERE service_key=:key;');
+		$this->setTryDate = $pdo->prepare('INSERT INTO services (service_key, service_last_try) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_last_try=:dt');
+		$this->setLastRun = $pdo->prepare('INSERT INTO services (service_key, service_last_run) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_last_run=:dt');
+		$this->setNextRun = $pdo->prepare('INSERT INTO services (service_key, service_next_run) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_next_run=:dt');
 	}
 
 	/**
 	 * @param string $key
 	 * @return bool
 	 */
-	public function has($key) {
+	public function has(string $key) {
 		try {
 			$this->hasService->execute(['key' => $key]);
 			$count = $this->hasService->fetchColumn(0);
@@ -56,60 +63,52 @@ class SqliteAttributeRepository implements AttributeRepository {
 			$this->hasService->closeCursor();
 		}
 	}
+	
+	/**
+	 * @param string $key
+	 * @return SqliteAttributeRepository|void
+	 */
+	public function register(string $key) {
+		$this->registerRow->execute(['key' => $key]);
+	}
 
 	/**
 	 * @param string $key
-	 * @param int $timeout
-	 * @param array $data
-	 * @return $this
+	 * @return object
 	 */
-	public function store($key, $timeout, array $data = []) {
-		$key = trim(strtolower($key));
-		if(!in_array($key, $this->services)) {
-			$this->services[] = $key;
-		} else {
-			throw new RuntimeException("Duplicate service: {$key}");
+	public function getRowByKey(string $key) {
+		try {
+			$this->getData->execute(['key' => $key]);
+			$result = $this->getData->fetchObject();
+			if(!is_object($result)) {
+				throw new RuntimeException('Row not found');
+			}
+			return $result;
+		} finally {
+			$this->getData->closeCursor();
 		}
-
-		if($this->has($key)) {
-			$this->updateService->execute(['key' => $key, 'timeout' => $timeout]);
-		} else {
-			$this->insertService->execute(['key' => $key, 'timeout' => $timeout, 'try' => '2000-01-01 00:00:00', 'run' => '2000-01-01 00:00:00']);
-		}
-
-		return $this;
 	}
 	
 	/**
+	 * @param DateTimeInterface $now
 	 * @param callable $fn
 	 * @return int
-	 * @throws Throwable
 	 */
-	public function lockAndIterateServices($fn) {
+	public function lockAndIterateServices(DateTimeInterface $now, callable $fn): int {
 		$count = 0;
-		$services = $this->fetchServices();
+		$services = $this->fetchServices($now);
 		foreach($services as $service) {
-			$this->updateTryDate->execute(['key' => $service->getKey()]);
-			$this->pdo->exec('BEGIN EXCLUSIVE TRANSACTION');
-			try {
-				$this->updateTryDate->execute(['key' => $service->getKey()]); // Again to lock the row
-				$fn($service);
-				$this->updateRunDate->execute(['key' => $service->getKey()]);
-				$count++;
-				$this->pdo->exec('COMMIT');
-			} catch(Throwable $e) {
-				$this->pdo->exec('ROLLBACK');
-				throw $e;
-			}
+			$fn($service);
 		}
 		return $count;
 	}
-
+	
 	/**
+	 * @param DateTimeInterface $now
 	 * @return Service[]|Generator
 	 */
-	public function fetchServices() {
-		$this->selectServices->execute();
+	public function fetchServices(DateTimeInterface $now): Generator {
+		$this->selectServices->execute(['dt' => $now->format(self::SQLITE_DATETIME_FORMAT)]);
 		try {
 			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
 			foreach($services as $service) {
@@ -118,5 +117,44 @@ class SqliteAttributeRepository implements AttributeRepository {
 		} finally {
 			$this->selectServices->closeCursor();
 		}
+	}
+	
+	/**
+	 * @param int $version
+	 * @param string $statement
+	 */
+	private function migrate(int $version, string $statement): void {
+		$currentVersion = (int) $this->pdo->query('PRAGMA user_version')->fetchColumn(0);
+		if($currentVersion < $version) {
+			$this->pdo->exec($statement);
+			$this->pdo->exec("PRAGMA user_version={$version}");
+		}
+	}
+	
+	/**
+	 * @param string $key
+	 * @param DateTimeInterface $datetime
+	 * @return void
+	 */
+	public function setLastTryDate(string $key, DateTimeInterface $datetime): void {
+		$this->setTryDate->execute(['key' => $key, 'dt' => $datetime->format(self::SQLITE_DATETIME_FORMAT)]);
+	}
+	
+	/**
+	 * @param string $key
+	 * @param DateTimeInterface $datetime
+	 * @return void
+	 */
+	public function setLastRunDate(string $key, DateTimeInterface $datetime): void {
+		$this->setLastRun->execute(['key' => $key, 'dt' => $datetime->format(self::SQLITE_DATETIME_FORMAT)]);
+	}
+	
+	/**
+	 * @param string $key
+	 * @param DateTimeInterface $datetime
+	 * @return void
+	 */
+	public function setNextRunDate(string $key, DateTimeInterface $datetime): void {
+		$this->setNextRun->execute(['key' => $key, 'dt' => $datetime->format(self::SQLITE_DATETIME_FORMAT)]);
 	}
 }

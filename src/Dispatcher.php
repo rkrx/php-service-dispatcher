@@ -1,6 +1,7 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher;
 
+use DateTimeInterface;
 use Exception;
 
 interface Dispatcher {
@@ -14,18 +15,19 @@ interface Dispatcher {
 	 * @param $callable
 	 * @return $this
 	 */
-	public function register($key, $interval, $callable);
+	public function register(string $key, $interval, callable $callable);
 
 	/**
 	 * @param string $event
 	 * @param callable $fn
 	 * @return $this
 	 */
-	public function on($event, $fn);
-
+	public function on(string $event, callable $fn);
+	
 	/**
-	 * @throws Exception
+	 * @param DateTimeInterface $now
 	 * @return int Count of services successfully started
+	 * @throws Exception
 	 */
-	public function run();
+	public function run(DateTimeInterface $now);
 }

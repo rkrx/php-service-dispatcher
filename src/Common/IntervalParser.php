@@ -1,58 +1,104 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Common;
 
-use Exception;
+use Cron\CronExpression;
+use DateTimeImmutable;
+use DateTimeInterface;
+use Generator;
+use RuntimeException;
+use Throwable;
 
 class IntervalParser {
 	/**
-	 * @param string|int $interval
-	 * @return int
+	 * @param string|int|array $interval
+	 * @param DateTimeInterface|null $now
+	 * @return DateTimeImmutable
 	 */
-	public static function parse($interval) {
-		if(is_array($interval)) {
-			$result = array();
-			foreach($interval as $intervalStr) {
-				$result[] = self::parseString($intervalStr);
+	public static function getNext($interval, DateTimeInterface $now = null): DateTimeImmutable {
+		if($now === null) {
+			try {
+				$now = new DateTimeImmutable();
+			} catch (Throwable $e) {
+				throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
 			}
-			return min($result);
+		}
+		$result = null;
+		foreach(self::parse($interval, $now) as $date) {
+			if($result === null) {
+				$result = $date;
+			} elseif($date < $result) {
+				$result = $date;
+			}
+		}
+		return $result;
+	}
+	
+	/**
+	 * @param $interval
+	 * @param DateTimeInterface|null $now
+	 * @return Generator|DateTimeImmutable
+	 */
+	private static function parse($interval, DateTimeInterface $now) {
+		if(is_array($interval)) {
+			foreach($interval as $inner) {
+				yield from self::parse($inner, $now);
+			}
+		} elseif(ctype_digit($interval)) {
+			yield self::parseInt($interval, $now);
 		} else {
-			return self::parseString((string) $interval);
+			yield self::parseString($interval, $now);
 		}
 	}
-
+	
 	/**
-	 * @param int|string $interval
-	 * @return int
-	 * @throws Exception
+	 * @param int $interval
+	 * @param DateTimeInterface $now
+	 * @return DateTimeImmutable
 	 */
-	private static function parseString($interval) {
-		if(preg_match('/^\\d+$/', $interval)) {
-			return $interval;
-		}
+	private static function parseInt(int $interval, DateTimeInterface $now): DateTimeImmutable {
+		return $now->modify("+{$interval} second");
+	}
+	
+	/**
+	 * @param string $interval
+	 * @param DateTimeInterface $now
+	 * @return DateTimeInterface
+	 */
+	private static function parseString(string $interval, DateTimeInterface $now): DateTimeInterface {
 		if(preg_match('/^(\\d{1,2}|\\*):(\\d{1,2}|\\*)(?::(\\d{1,2}|\\*))?$/', $interval, $matches)) {
 			$matches[] = 0;
-			list($hours, $minutes, $seconds) = array_slice($matches, 1);
-			$possibleDates = array(
-				sprintf('today %02d:%02d:%02d', $hours, $minutes, $seconds),
-				sprintf('tomorrow %02d:%02d:%02d', $hours, $minutes, $seconds),
-			);
-			return self::nearst($possibleDates);
+			[$hours, $minutes, $seconds] = array_slice($matches, 1);
+			$today = date_create_immutable($now->format('c'))->setTime((int) $hours, (int) $minutes, (int) $seconds);
+			$possibleDates = [
+				$today,
+				$today->modify('+24 hour')
+			];
+			return self::nearst($possibleDates, $now);
 		}
-		throw new Exception("Unrecognized time format: {$interval}");
+		// Expect input to be a cron-expression
+		$expr = new CronExpression($interval);
+		$dt = $expr->getNextRunDate($now);
+		return new DateTimeImmutable($dt->format('c'));
 	}
-
+	
 	/**
 	 * @param array $possibleDates
-	 * @return int
-	 * @throws Exception
+	 * @param DateTimeInterface $now
+	 * @return DateTimeInterface
 	 */
-	private static function nearst(array $possibleDates) {
+	private static function nearst(array $possibleDates, DateTimeInterface $now) {
+		$current = null;
 		foreach($possibleDates as $possibleDate) {
-			$time = strtotime($possibleDate);
-			if($time > time()) {
-				return $time - time();
+			if($now > $possibleDate) { // The current date is in the past
+				continue;
+			}
+			if($current === null || $possibleDate < $current) {
+				$current = $possibleDate;
 			}
 		}
-		throw new Exception('No alternative lays in the future');
+		if($current !== null) {
+			return $current;
+		}
+		throw new RuntimeException('No alternative lays in the future');
 	}
 }
