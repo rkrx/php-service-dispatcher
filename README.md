@@ -17,7 +17,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
 
-$dispatcher = ServiceDispatcherBuilder::withSQLite(__DIR__.'/services.db');
+$dispatcher = ServiceDispatcherBuilder::withSQLite(__DIR__.'/services.db')->build();
 
 $dispatcher->register('service1', Dispatcher::ONE_HOUR, function () {
 	// Do something

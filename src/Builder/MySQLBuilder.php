@@ -1,14 +1,16 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Builder;
 
+use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\AttributeRepositories\MySQLAttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatcher;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 use PDO;
 
 class MySQLBuilder {
 	/** @var PDO */
 	private $pdo;
+	/** @var MethodInvoker|null */
+	private $methodInvoker;
 	/** @var bool */
 	private $useLocking = true;
 	/** @var string */
@@ -20,7 +22,18 @@ class MySQLBuilder {
 	public function __construct(PDO $pdo) {
 		$this->pdo = $pdo;
 	}
-	
+
+	/**
+	 * This can be used to enable automatic provisioning of DI objects when service methods are called. (Autowiring)
+	 *
+	 * @param MethodInvoker|null $methodInvoker
+	 * @return $this
+	 */
+	public function setMethodInvoker(MethodInvoker $methodInvoker = null): self {
+		$this->methodInvoker = $methodInvoker;
+		return $this;
+	}
+
 	/**
 	 * Enabled by default.
 	 * You can disable global locking (using MySQL's GET_LOCK) per service-run.
@@ -60,6 +73,6 @@ class MySQLBuilder {
 			'use-locking' => $this->useLocking,
 			'lock-prefix' => $this->lockPrefix,
 		]);
-		return new DefaultDispatcher($repos);
+		return new DefaultDispatcher($repos, $this->methodInvoker);
 	}
 }
