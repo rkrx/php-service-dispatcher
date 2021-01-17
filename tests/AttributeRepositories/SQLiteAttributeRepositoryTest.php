@@ -12,7 +12,9 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		$repository->setLastTryDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
-		self::assertNotNull('service_last_try', $row->service_last_try ?? null);
+		self::assertNotNull($row->service_last_try);
+		self::assertNull($row->service_last_run);
+		self::assertNull($row->service_next_run);
 	}
 	
 	public function testSetLastRunDate() {
@@ -21,7 +23,9 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		$repository->setLastRunDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
-		self::assertNotNull('service_last_try', $row->service_last_run ?? null);
+		self::assertNull($row->service_last_try);
+		self::assertNotNull($row->service_last_run);
+		self::assertNull($row->service_next_run);
 	}
 	
 	public function testSetNextRunDate() {
@@ -30,7 +34,9 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		$repository->setNextRunDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
-		self::assertNotNull('service_last_try', $row->service_next_try ?? null);
+		self::assertNull($row->service_last_try);
+		self::assertNull($row->service_last_run);
+		self::assertNotNull($row->service_next_run);
 	}
 	
 	public function testCompleteRun() {

@@ -12,12 +12,13 @@ class MySQLAttributeRepositoryTest extends TestCase {
 		$pdo = $this->createConnection();
 		$this->transaction($pdo, function (PDO $pdo) {
 			$repository = $this->getRepos($pdo);
+			$repository->register('xx');
 			$repository->setLastTryDate('xx', date_create_immutable());
 			$row = $repository->getRowByKey('xx');
 			self::assertEquals('xx', $row->service_key ?? null);
-			self::assertNotNull('service_last_try', $row->service_last_try ?? null);
-			self::assertNotNull('service_last_run', null);
-			self::assertNotNull('service_next_try', null);
+			self::assertNotNull($row->service_last_try);
+			self::assertNull($row->service_last_run);
+			self::assertNull($row->service_next_run);
 		});
 	}
 	
@@ -25,12 +26,13 @@ class MySQLAttributeRepositoryTest extends TestCase {
 		$pdo = $this->createConnection();
 		$this->transaction($pdo, function (PDO $pdo) {
 			$repository = $this->getRepos($pdo);
+			$repository->register('xx');
 			$repository->setLastRunDate('xx', date_create_immutable());
 			$row = $repository->getRowByKey('xx');
-			self::assertEquals('xx', $row->service_key ?? null);
-			self::assertNotNull('service_last_try', null);
-			self::assertNotNull('service_last_run', $row->service_last_run ?? null);
-			self::assertNotNull('service_next_try', null);
+			self::assertEquals('xx', $row->service_key);
+			self::assertNull($row->service_last_try);
+			self::assertNotNull($row->service_last_run);
+			self::assertNull($row->service_next_run);
 		});
 	}
 	
@@ -38,12 +40,13 @@ class MySQLAttributeRepositoryTest extends TestCase {
 		$pdo = $this->createConnection();
 		$this->transaction($pdo, function (PDO $pdo) {
 			$repository = $this->getRepos($pdo);
+			$repository->register('xx');
 			$repository->setNextRunDate('xx', date_create_immutable());
 			$row = $repository->getRowByKey('xx');
-			self::assertEquals('xx', $row->service_key ?? null);
-			self::assertNotNull('service_last_try', null);
-			self::assertNotNull('service_last_run', null);
-			self::assertNotNull('service_next_try', $row->service_next_try ?? null);
+			self::assertEquals('xx', $row->service_key);
+			self::assertNull($row->service_last_try);
+			self::assertNull($row->service_last_run);
+			self::assertNotNull($row->service_next_run);
 		});
 	}
 	
@@ -54,10 +57,10 @@ class MySQLAttributeRepositoryTest extends TestCase {
 			$pdo->exec(sprintf("INSERT INTO %s (service_key, service_last_try, service_last_run, service_timeout) VALUES ('test1', '2020-01-01 00:00:00', '2020-01-02 00:00:00', 3600)", self::TABLE_NAME));
 			$repository = $this->getRepos($pdo);
 			$row = $repository->getRowByKey('test1');
-			self::assertEquals('test1', $row->service_key ?? null);
-			self::assertNotNull('service_last_try', '2020-01-01 00:00:00');
-			self::assertNotNull('service_last_run', '2020-01-02 00:00:00');
-			self::assertNotNull('service_next_try', '2020-01-02 01:00:00');
+			self::assertEquals('test1', $row->service_key);
+			self::assertNotNull($row->service_last_try);
+			self::assertNotNull($row->service_last_run);
+			self::assertNotNull($row->service_next_run);
 		});
 	}
 	
