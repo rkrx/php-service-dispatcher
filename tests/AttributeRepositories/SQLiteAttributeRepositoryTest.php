@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 class SQLiteAttributeRepositoryTest extends TestCase {
 	public function testSetLastTryDate() {
 		$repository = $this->getRepos();
+		$repository->register('xx');
 		$repository->setLastTryDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
@@ -16,6 +17,7 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 	
 	public function testSetLastRunDate() {
 		$repository = $this->getRepos();
+		$repository->register('xx');
 		$repository->setLastRunDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
@@ -24,6 +26,7 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 	
 	public function testSetNextRunDate() {
 		$repository = $this->getRepos();
+		$repository->register('xx');
 		$repository->setNextRunDate('xx', date_create_immutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);

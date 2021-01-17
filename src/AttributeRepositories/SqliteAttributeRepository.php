@@ -45,9 +45,9 @@ class SqliteAttributeRepository implements AttributeRepository {
 		$this->registerRow = $pdo->prepare('INSERT OR IGNORE INTO services (service_key) VALUES (:key);');
 		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
 		$this->getData = $pdo->prepare('SELECT service_key, service_last_try, service_last_run, service_next_run FROM services WHERE service_key=:key;');
-		$this->setTryDate = $pdo->prepare('INSERT INTO services (service_key, service_last_try) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_last_try=:dt');
-		$this->setLastRun = $pdo->prepare('INSERT INTO services (service_key, service_last_run) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_last_run=:dt');
-		$this->setNextRun = $pdo->prepare('INSERT INTO services (service_key, service_next_run) VALUES (:key, :dt) ON CONFLICT(service_key) DO UPDATE SET service_next_run=:dt');
+		$this->setTryDate = $pdo->prepare('UPDATE services SET service_last_try=:dt WHERE service_key=:key');
+		$this->setLastRun = $pdo->prepare('UPDATE services SET service_last_run=:dt WHERE service_key=:key');
+		$this->setNextRun = $pdo->prepare('UPDATE services SET service_next_run=:dt WHERE service_key=:key');
 	}
 
 	/**
