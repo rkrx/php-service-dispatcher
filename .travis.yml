@@ -13,6 +13,7 @@ php:
 before_script:
   - composer self-update
   - composer update
+  - mysql -u root -e 'CREATE DATABASE test;'
 
 script:
   - vendor/bin/phpunit -c tests.xml
