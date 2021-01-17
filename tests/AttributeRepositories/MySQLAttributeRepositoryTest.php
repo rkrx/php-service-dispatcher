@@ -88,12 +88,17 @@ class MySQLAttributeRepositoryTest extends TestCase {
 	}
 	
 	private function transaction(PDO $pdo, $fn) {
+		$isAlreadyInTransaction = $pdo->inTransaction();
 		try {
 			$pdo->exec(sprintf('DROP TABLE IF EXISTS %s', self::TABLE_NAME));
-			$pdo->beginTransaction();
+			if(!$isAlreadyInTransaction) {
+				$pdo->beginTransaction();
+			}
 			$fn($pdo);
 		} finally {
-			$pdo->rollBack();
+			if(!$isAlreadyInTransaction) {
+				$pdo->rollBack();
+			}
 		}
 	}
 	
