@@ -1,7 +1,6 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Common;
 
-use Cron\CronExpression;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Generator;
@@ -68,7 +67,7 @@ class IntervalParser {
 		if(preg_match('/^(\\d{1,2}|\\*):(\\d{1,2}|\\*)(?::(\\d{1,2}|\\*))?$/', $interval, $matches)) {
 			$matches[] = 0;
 			[$hours, $minutes, $seconds] = array_slice($matches, 1);
-			$today = date_create_immutable($now->format('c'))->setTime((int) $hours, (int) $minutes, (int) $seconds);
+			$today = DateTimeHelper::createImmutable($now)->setTime((int) $hours, (int) $minutes, (int) $seconds);
 			$possibleDates = [
 				$today,
 				$today->modify('+24 hour')
@@ -76,9 +75,7 @@ class IntervalParser {
 			return self::nearst($possibleDates, $now);
 		}
 		// Expect input to be a cron-expression
-		$expr = new CronExpression($interval);
-		$dt = $expr->getNextRunDate($now);
-		return new DateTimeImmutable($dt->format('c'));
+		return DateTimeHelper::getNextRunDateFromCronExpression($interval, $now);
 	}
 	
 	/**

@@ -3,13 +3,12 @@ namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
 use Closure;
 use DateTimeInterface;
+use Kir\Services\Cmd\Dispatcher\AttributeRepository;
+use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use PDO;
 use PDOException;
 use PDOStatement;
-use Kir\Services\Cmd\Dispatcher\AttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use RuntimeException;
-use Throwable;
 
 class MySQLAttributeRepository implements AttributeRepository {
 	const MYSQL_ERR_TABLE_MSSING = '42S02';
@@ -167,7 +166,6 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 * @param DateTimeInterface|null $now
 	 * @param callable $fn
 	 * @return int
-	 * @throws Throwable
 	 */
 	public function lockAndIterateServices(?DateTimeInterface $now, callable $fn): int {
 		$data = (object) ['count' => 0];

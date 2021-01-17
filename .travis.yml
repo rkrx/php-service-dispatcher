@@ -12,7 +12,7 @@ php:
 
 before_script:
   - composer self-update
-  - composer update
+  - composer install --prefer-dist --no-interaction
   - mysql -u root -e 'CREATE DATABASE test;'
 
 script:

@@ -3,10 +3,10 @@ namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
 use DateTimeInterface;
 use Generator;
-use PDO;
-use PDOStatement;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
+use PDO;
+use PDOStatement;
 use RuntimeException;
 
 class SqliteAttributeRepository implements AttributeRepository {
@@ -15,15 +15,13 @@ class SqliteAttributeRepository implements AttributeRepository {
 	/** @var PDO */
 	private $pdo;
 	/** @var PDOStatement */
-	private $registerRow = null;
+	private $registerRow;
 	/** @var PDOStatement */
 	private $selectServices;
 	/** @var PDOStatement */
 	private $hasService;
 	/** @var PDOStatement */
 	private $getData;
-	/** @var PDOStatement */
-	private $insertService;
 	/** @var PDOStatement */
 	private $setNextRun;
 	/** @var PDOStatement */

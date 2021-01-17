@@ -8,7 +8,7 @@ php-service-dispatcher
 
 ## Common usage using SQLite
 
-A simple service dispatcher for shell scripts. The intent is to run a php shell script every minute and let the script decide, what to run at what time...
+A simple service dispatcher for shell scripts. The intent is to run a php-cli script every minute and let the script decide, what to run at what time...
 
 ```PHP
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
@@ -31,7 +31,7 @@ $dispatcher->register('service2', Dispatcher::ONE_HOUR * 3, function () {
 $dispatcher->run();
 ```
 
-The example above show the most simple usage of the service dispatcher. Two services get registered. "Service1" and
+The example above show the simplest usage of the service dispatcher. Two services get registered. "Service1" and
 "Service2". If one service throws an exception, the whole execution stops. Next time, the failed service starts at the
 end of the queue. If a service was successfully executed, the timeout schedules the service in this case to 1 hour
 (3600 seconds) in the future.
@@ -47,7 +47,8 @@ require __DIR__ . '/vendor/autoload.php';
 
 $dispatcher = ServiceDispatcherBuilder::withMySQL($pdo)
 ->useLocking(true)
-->setLockPrefix('my-app:');
+->setLockPrefix('my-app:')
+->build();
 
 $dispatcher->register(/*...*/);
 
