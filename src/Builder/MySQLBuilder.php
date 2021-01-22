@@ -15,12 +15,16 @@ class MySQLBuilder {
 	private $useLocking = true;
 	/** @var string */
 	private $lockPrefix = '';
+	/** @var string */
+	private $tableName;
 	
 	/**
 	 * @param PDO $pdo
+	 * @param string $tableName
 	 */
-	public function __construct(PDO $pdo) {
+	public function __construct(PDO $pdo, string $tableName) {
 		$this->pdo = $pdo;
+		$this->tableName = $tableName;
 	}
 
 	/**
@@ -69,7 +73,7 @@ class MySQLBuilder {
 	 * @return DefaultDispatcher
 	 */
 	public function build(): DefaultDispatcher {
-		$repos = new MySQLAttributeRepository($this->pdo, [
+		$repos = new MySQLAttributeRepository($this->pdo, $this->tableName, [
 			'use-locking' => $this->useLocking,
 			'lock-prefix' => $this->lockPrefix,
 		]);

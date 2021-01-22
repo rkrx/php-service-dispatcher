@@ -5,14 +5,14 @@ use DateTimeInterface;
 use Exception;
 
 interface Dispatcher {
-	const ONE_DAY = 86400;
-	const ONE_HOUR = 3600;
-	const ONE_MINUTE = 60;
+	public const ONE_DAY = 86400;
+	public const ONE_HOUR = 3600;
+	public const ONE_MINUTE = 60;
 
 	/**
 	 * @param string $key
 	 * @param string|int $interval
-	 * @param $callable
+	 * @param callable $callable
 	 * @return $this
 	 */
 	public function register(string $key, $interval, callable $callable);
@@ -25,9 +25,9 @@ interface Dispatcher {
 	public function on(string $event, callable $fn);
 	
 	/**
-	 * @param DateTimeInterface $now
+	 * @param DateTimeInterface|null $now
 	 * @return int Count of services successfully started
 	 * @throws Exception
 	 */
-	public function run(DateTimeInterface $now);
+	public function run(DateTimeInterface $now = null): int;
 }

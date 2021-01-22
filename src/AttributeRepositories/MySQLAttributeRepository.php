@@ -123,9 +123,9 @@ class MySQLAttributeRepository implements AttributeRepository {
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return MySQLAttributeRepository|void
+	 * @return void
 	 */
-	public function setLastTryDate(string $key, DateTimeInterface $datetime) {
+	public function setLastTryDate(string $key, DateTimeInterface $datetime): void {
 		if($this->updateTryDate === null) {
 			$this->updateTryDate = $this->pdo->prepare("INSERT INTO `{$this->tableName}` (service_key, service_last_try) VALUES (:key, :dt) ON DUPLICATE KEY UPDATE service_last_try=:dt");
 		}
@@ -137,9 +137,9 @@ class MySQLAttributeRepository implements AttributeRepository {
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return MySQLAttributeRepository|void
+	 * @return void
 	 */
-	public function setLastRunDate(string $key, DateTimeInterface $datetime) {
+	public function setLastRunDate(string $key, DateTimeInterface $datetime): void {
 		if($this->updateRunDate === null) {
 			$this->updateRunDate = $this->pdo->prepare("INSERT INTO `{$this->tableName}` (service_key, service_last_run) VALUES (:key, :dt) ON DUPLICATE KEY UPDATE service_last_run=:dt");
 		}
@@ -151,9 +151,9 @@ class MySQLAttributeRepository implements AttributeRepository {
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return MySQLAttributeRepository|void
+	 * @return void
 	 */
-	public function setNextRunDate(string $key, DateTimeInterface $datetime) {
+	public function setNextRunDate(string $key, DateTimeInterface $datetime): void {
 		if($this->updateNextDate === null) {
 			$this->updateNextDate = $this->pdo->prepare("INSERT INTO `{$this->tableName}` (service_key, service_next_run) VALUES (:key, :dt) ON DUPLICATE KEY UPDATE service_next_run=:dt");
 		}

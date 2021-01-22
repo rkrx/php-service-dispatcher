@@ -1,17 +1,21 @@
 {
-	"type": "library",
 	"name": "rkr/service-dispatcher",
 	"description": "",
+	"type": "library",
 	"license": "MIT",
 	"prefer-stable": true,
 	"minimum-stability": "dev",
 	"require": {
 		"php": ">= 7.1",
 		"ext-pdo": "*",
-		"psr/log": "~1.0",
+		"psr/log": ">= 1.0",
 		"rkr/php-ioc-contract": "~0.1@stable",
 		"dragonmantank/cron-expression": ">= 3",
-		"phpunit/phpunit": ">=7 <9"
+		"phpstan/phpstan": "^0.12.68"
+	},
+	"require-dev": {
+		"phpunit/phpunit": ">=7 <9",
+		"vimeo/psalm": ">= 3"
 	},
 	"autoload": {
 		"psr-4": {
@@ -22,5 +26,8 @@
 		"psr-4": {
 			"Kir\\Services\\Cmd\\Dispatcher\\": ["src/", "tests/"]
 		}
+	},
+	"scripts": {
+		"phpstan": "phpstan analyse --level 4 src"
 	}
 }

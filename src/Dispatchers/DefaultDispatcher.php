@@ -37,7 +37,7 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @param string $key
-	 * @param string|int $interval
+	 * @param string|int|array $interval
 	 * @param callable $callable
 	 * @return $this
 	 */
@@ -68,9 +68,9 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param DateTimeInterface|null $now
 	 * @return int Number of successfully executed services
 	 */
-	public function run(DateTimeInterface $now = null) {
-		$now = $now ?? date_create_immutable();
-		return $this->attributeRepository->lockAndIterateServices($now, function (Service $service) {
+	public function run(DateTimeInterface $now = null): int {
+		$dt = $now ?? date_create_immutable();
+		return $this->attributeRepository->lockAndIterateServices($dt, function (Service $service) {
 			if(!array_key_exists($service->getKey(), $this->services)) {
 				return;
 			}
@@ -106,7 +106,7 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param string $event
 	 * @param array $params
 	 */
-	private function fireEvent($event, $params) {
+	private function fireEvent(string $event, array $params): void {
 		if(array_key_exists($event, $this->listeners)) {
 			try {
 				foreach($this->listeners[$event] as $listener) {

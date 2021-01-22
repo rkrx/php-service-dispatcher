@@ -13,23 +13,23 @@ interface AttributeRepository {
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return $this
+	 * @return void
 	 */
-	public function setLastTryDate(string $key, DateTimeInterface $datetime);
+	public function setLastTryDate(string $key, DateTimeInterface $datetime): void;
 	
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return $this
+	 * @return void
 	 */
-	public function setLastRunDate(string $key, DateTimeInterface $datetime);
+	public function setLastRunDate(string $key, DateTimeInterface $datetime): void;
 	
 	/**
 	 * @param string $key
 	 * @param DateTimeInterface $datetime
-	 * @return $this
+	 * @return void
 	 */
-	public function setNextRunDate(string $key, DateTimeInterface $datetime);
+	public function setNextRunDate(string $key, DateTimeInterface $datetime): void;
 	
 	/**
 	 * @param DateTimeInterface $now

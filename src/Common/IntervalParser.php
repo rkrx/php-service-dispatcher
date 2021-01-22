@@ -20,6 +20,8 @@ class IntervalParser {
 			} catch (Throwable $e) {
 				throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
 			}
+		} else {
+			$now = DateTimeHelper::createImmutable($now);
 		}
 		$result = null;
 		foreach(self::parse($interval, $now) as $date) {
@@ -33,11 +35,11 @@ class IntervalParser {
 	}
 	
 	/**
-	 * @param $interval
-	 * @param DateTimeInterface|null $now
-	 * @return Generator|DateTimeImmutable
+	 * @param string|array $interval
+	 * @param DateTimeImmutable $now
+	 * @return Generator|DateTimeImmutable[]
 	 */
-	private static function parse($interval, DateTimeInterface $now) {
+	private static function parse($interval, DateTimeImmutable $now) {
 		if(is_array($interval)) {
 			foreach($interval as $inner) {
 				yield from self::parse($inner, $now);
@@ -51,19 +53,19 @@ class IntervalParser {
 	
 	/**
 	 * @param int $interval
-	 * @param DateTimeInterface $now
+	 * @param DateTimeImmutable $now
 	 * @return DateTimeImmutable
 	 */
-	private static function parseInt(int $interval, DateTimeInterface $now): DateTimeImmutable {
+	private static function parseInt(int $interval, DateTimeImmutable $now): DateTimeImmutable {
 		return $now->modify("+{$interval} second");
 	}
 	
 	/**
 	 * @param string $interval
-	 * @param DateTimeInterface $now
-	 * @return DateTimeInterface
+	 * @param DateTimeImmutable $now
+	 * @return DateTimeImmutable
 	 */
-	private static function parseString(string $interval, DateTimeInterface $now): DateTimeInterface {
+	private static function parseString(string $interval, DateTimeImmutable $now): DateTimeImmutable {
 		if(preg_match('/^(\\d{1,2}|\\*):(\\d{1,2}|\\*)(?::(\\d{1,2}|\\*))?$/', $interval, $matches)) {
 			$matches[] = 0;
 			[$hours, $minutes, $seconds] = array_slice($matches, 1);
@@ -80,10 +82,10 @@ class IntervalParser {
 	
 	/**
 	 * @param array $possibleDates
-	 * @param DateTimeInterface $now
-	 * @return DateTimeInterface
+	 * @param DateTimeImmutable $now
+	 * @return DateTimeImmutable
 	 */
-	private static function nearst(array $possibleDates, DateTimeInterface $now) {
+	private static function nearst(array $possibleDates, DateTimeImmutable $now) {
 		$current = null;
 		foreach($possibleDates as $possibleDate) {
 			if($now > $possibleDate) { // The current date is in the past
