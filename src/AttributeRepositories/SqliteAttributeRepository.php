@@ -37,15 +37,19 @@ class SqliteAttributeRepository implements AttributeRepository {
 		$this->pdo = $pdo;
 		
 		// https://stackoverflow.com/a/8442173
-		$this->migrate(1, 'CREATE TABLE IF NOT EXISTS services (service_key STRING PRIMARY KEY, service_last_try DATETIME, service_last_run DATETIME, service_next_run DATETIME);');
+		$this->migrate(1, 'CREATE TABLE IF NOT EXISTS "services" ("service_key" STRING PRIMARY KEY, "service_last_try" DATETIME, "service_last_run" DATETIME, "service_timeout" INTEGER);');
+		$this->migrate(2, 'CREATE TABLE IF NOT EXISTS "services_new" ("service_key" STRING PRIMARY KEY, "service_last_try" DATETIME, "service_last_run" DATETIME, "service_next_run" INTEGER);');
+		$this->migrate(3, 'INSERT INTO "services_new" ("service_key", "service_last_try", "service_last_run", "service_next_run") SELECT "service_key", "service_last_try", "service_last_run", DATETIME("service_last_run",  \'+\' || "service_timeout" || \' seconds\') FROM "services"');
+		$this->migrate(4, 'DROP TABLE "services"');
+		$this->migrate(5, 'ALTER TABLE "services_new" RENAME TO "services"');
 		
-		$this->selectServices = $pdo->prepare("SELECT service_key, service_last_try, service_last_run FROM services WHERE service_next_run IS NULL OR DATETIME(service_next_run) <= DATETIME(:dt) ORDER BY MAX(service_last_try, service_last_run);");
-		$this->registerRow = $pdo->prepare('INSERT OR IGNORE INTO services (service_key) VALUES (:key);');
-		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM services WHERE service_key=:key;');
-		$this->getData = $pdo->prepare('SELECT service_key, service_last_try, service_last_run, service_next_run FROM services WHERE service_key=:key;');
-		$this->setTryDate = $pdo->prepare('UPDATE services SET service_last_try=:dt WHERE service_key=:key');
-		$this->setLastRun = $pdo->prepare('UPDATE services SET service_last_run=:dt WHERE service_key=:key');
-		$this->setNextRun = $pdo->prepare('UPDATE services SET service_next_run=:dt WHERE service_key=:key');
+		$this->selectServices = $pdo->prepare('SELECT "service_key", "service_last_try", "service_last_run" FROM "services" WHERE "service_next_run" IS NULL OR DATETIME("service_next_run") <= DATETIME(:dt) ORDER BY MAX("service_last_try", "service_last_run");');
+		$this->registerRow = $pdo->prepare('INSERT OR IGNORE INTO "services" ("service_key") VALUES (:key);');
+		$this->hasService = $pdo->prepare('SELECT COUNT(*) FROM "services" WHERE "service_key"=:key;');
+		$this->getData = $pdo->prepare('SELECT "service_key", "service_last_try", "service_last_run", "service_next_run" FROM "services" WHERE "service_key"=:key;');
+		$this->setTryDate = $pdo->prepare('UPDATE "services" SET "service_last_try"=:dt WHERE "service_key"=:key');
+		$this->setLastRun = $pdo->prepare('UPDATE "services" SET "service_last_run"=:dt WHERE "service_key"=:key');
+		$this->setNextRun = $pdo->prepare('UPDATE "services" SET "service_next_run"=:dt WHERE "service_key"=:key');
 	}
 
 	/**

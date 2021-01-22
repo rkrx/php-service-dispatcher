@@ -2,6 +2,7 @@
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
+use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
 use PDO;
 use PHPUnit\Framework\TestCase;
 
@@ -53,6 +54,32 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		self::assertFalse($data->run);
 		$row = $repository->getRowByKey('test1');
 		self::assertRegExp('/^\\d{4}\\-\\d{2}\\-\\d{2}T03:00:00$/', $row->service_next_run);
+	}
+	
+	public function testAutomaticDatabaseUpgrade() {
+		copy(__DIR__.'/SQLite/services.db', __DIR__.'/SQLite/services-test.db');
+		ServiceDispatcherBuilder::withSQLite(__DIR__.'/SQLite/services-test.db')->build();
+		$pdo = new PDO(sprintf('sqlite:%s', __DIR__.'/SQLite/services-test.db'));
+		$rows = $pdo->query('SELECT * FROM "services"')->fetchAll(PDO::FETCH_ASSOC);
+		
+		$expectedData = [[
+			'service_key' => 'test1',
+			'service_last_try' => '2020-01-01 00:00:00',
+			'service_last_run' => '2020-01-01 00:00:00',
+			'service_next_run' => '2020-01-01 00:01:00',
+		], [
+			'service_key' => 'test2',
+			'service_last_try' => '2020-01-01 00:00:00',
+			'service_last_run' => '2020-01-01 00:00:00',
+			'service_next_run' => '2020-01-01 01:00:00',
+		], [
+			'service_key' => 'test3',
+			'service_last_try' => '2020-01-01 00:00:00',
+			'service_last_run' => '2020-01-01 00:00:00',
+			'service_next_run' => '2020-01-02 00:00:00',
+		]];
+		
+		self::assertEquals($expectedData, $rows);
 	}
 	
 	public function getRepos(): SqliteAttributeRepository {
