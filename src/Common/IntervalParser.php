@@ -44,7 +44,7 @@ class IntervalParser {
 			foreach($interval as $inner) {
 				yield from self::parse($inner, $now);
 			}
-		} elseif(ctype_digit($interval)) {
+		} elseif(preg_match('/^\\d+$/', $interval)) {
 			yield self::parseInt($interval, $now);
 		} else {
 			yield self::parseString($interval, $now);
