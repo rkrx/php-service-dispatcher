@@ -106,11 +106,15 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param string $event
 	 * @param array $params
 	 */
-	private function fireEvent(string $event, array $params): void {
+	private function fireEvent(string $event, array $params) {
 		if(array_key_exists($event, $this->listeners)) {
 			try {
 				foreach($this->listeners[$event] as $listener) {
-					$this->methodInvoker->invoke($listener, $params);
+					if($this->methodInvoker !== null) {
+						$this->methodInvoker->invoke($listener, $params);
+					} else {
+						call_user_func($listener, $params['serviceName'] ?? null);
+					}
 				}
 			} catch (Exception $e) {
 				// Supress exceptions emitted by events

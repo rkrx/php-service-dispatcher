@@ -2,6 +2,7 @@
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
 use Kir\Services\Cmd\Dispatcher\AttributeRepositories\SqliteAttributeRepository;
+use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
 use PDO;
 use PHPUnit\Framework\TestCase;
 
@@ -95,5 +96,22 @@ class DefaultDispatcherTest extends TestCase {
 		$nextRunValues = $pdo->query('SELECT service_key, service_next_run FROM services')->fetchAll(PDO::FETCH_KEY_PAIR);
 		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T03:00:00$/', $nextRunValues['service1'] ?? null);
 		self::assertRegExp('/^\\d{4}-\\d{2}-\\d{2}T06:00:00$/', $nextRunValues['service2'] ?? null);
+	}
+
+	public function testEventHandling() {
+		$data = (object) ['serviceStart' => null, 'serviceSuccess' => null];
+
+		$dispatcher = ServiceDispatcherBuilder::withSQLite(':memory:')->build();
+		$dispatcher->register('test', '* * * * *', function () use ($data) {});
+		$dispatcher->on('service-start', static function (string $serviceName) use ($data) {
+			$data->serviceStart = $serviceName;
+		});
+		
+		$dispatcher->on('service-success', static function (string $serviceName) use ($data) {
+			$data->serviceSuccess = $serviceName;
+		});
+		$dispatcher->run();
+		
+		self::assertEquals((object) ['serviceStart' => 'test', 'serviceSuccess' => 'test'], $data);
 	}
 }
