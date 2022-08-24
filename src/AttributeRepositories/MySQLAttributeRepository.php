@@ -188,7 +188,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 */
 	private function fetchServices(DateTimeInterface $now) {
 		if($this->selectOverdueServices === null) {
-			$this->selectOverdueServices = $this->pdo->prepare("SELECT service_key, service_last_try, service_last_run, service_next_run FROM `{$this->tableName}` WHERE IFNULL(service_next_run, DATE('2000-01-01')) <= :dt, ORDER BY service_last_try;");
+			$this->selectOverdueServices = $this->pdo->prepare("SELECT service_key, service_last_try, service_last_run, service_next_run FROM `{$this->tableName}` WHERE IFNULL(service_next_run, DATE('2000-01-01')) <= :dt ORDER BY service_last_try;");
 		}
 		return $this->handleException(function () use ($now) {
 			$this->selectOverdueServices->execute(['dt' => $now->format('Y-m-d H:i:d')]);
