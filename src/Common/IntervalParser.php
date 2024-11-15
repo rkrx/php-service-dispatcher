@@ -13,7 +13,7 @@ class IntervalParser {
 	 * @param DateTimeInterface|null $now
 	 * @return DateTimeImmutable
 	 */
-	public static function getNext($interval, DateTimeInterface $now = null): DateTimeImmutable {
+	public static function getNext($interval, ?DateTimeInterface $now = null): DateTimeImmutable {
 		if($now === null) {
 			try {
 				$now = new DateTimeImmutable();

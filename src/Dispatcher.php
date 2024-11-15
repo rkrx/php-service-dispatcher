@@ -29,5 +29,5 @@ interface Dispatcher {
 	 * @return int Count of services successfully started
 	 * @throws Exception
 	 */
-	public function run(DateTimeInterface $now = null): int;
+	public function run(?DateTimeInterface $now = null): int;
 }

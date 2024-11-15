@@ -33,7 +33,7 @@ class MySQLBuilder {
 	 * @param MethodInvoker|null $methodInvoker
 	 * @return $this
 	 */
-	public function setMethodInvoker(MethodInvoker $methodInvoker = null): self {
+	public function setMethodInvoker(?MethodInvoker $methodInvoker = null): self {
 		$this->methodInvoker = $methodInvoker;
 		return $this;
 	}

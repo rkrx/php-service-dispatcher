@@ -29,7 +29,7 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param MethodInvoker|null $methodInvoker
 	 * @param LoggerInterface|null $logger
 	 */
-	public function __construct(AttributeRepository $attributeRepository, MethodInvoker $methodInvoker = null, LoggerInterface $logger = null) {
+	public function __construct(AttributeRepository $attributeRepository, ?MethodInvoker $methodInvoker = null, ?LoggerInterface $logger = null) {
 		$this->attributeRepository = $attributeRepository;
 		$this->methodInvoker = $methodInvoker;
 		$this->logger = $logger;
@@ -68,7 +68,7 @@ class DefaultDispatcher implements Dispatcher {
 	 * @param DateTimeInterface|null $now
 	 * @return int Number of successfully executed services
 	 */
-	public function run(DateTimeInterface $now = null): int {
+	public function run(?DateTimeInterface $now = null): int {
 		$dt = $now ?? date_create_immutable();
 		return $this->attributeRepository->lockAndIterateServices($dt, function (Service $service) {
 			if(!array_key_exists($service->getKey(), $this->services)) {
