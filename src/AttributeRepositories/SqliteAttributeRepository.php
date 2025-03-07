@@ -12,14 +12,14 @@ use RuntimeException;
 class SqliteAttributeRepository implements AttributeRepository {
 	private const SQLITE_DATETIME_FORMAT = 'Y-m-d\\TH:i:s';
 	
-	private PDO $pdo;
-	private PDOStatement $registerRow;
-	private PDOStatement $selectServices;
-	private PDOStatement $hasService;
-	private PDOStatement $getData;
-	private PDOStatement $setNextRun;
-	private PDOStatement $setTryDate;
-	private PDOStatement $setLastRun;
+	private readonly PDO $pdo;
+	private readonly PDOStatement $registerRow;
+	private readonly PDOStatement $selectServices;
+	private readonly PDOStatement $hasService;
+	private readonly PDOStatement $getData;
+	private readonly PDOStatement $setNextRun;
+	private readonly PDOStatement $setTryDate;
+	private readonly PDOStatement $setLastRun;
 
 	/**
 	 * @param PDO $pdo
