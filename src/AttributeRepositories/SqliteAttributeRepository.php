@@ -12,22 +12,14 @@ use RuntimeException;
 class SqliteAttributeRepository implements AttributeRepository {
 	private const SQLITE_DATETIME_FORMAT = 'Y-m-d\\TH:i:s';
 	
-	/** @var PDO */
-	private $pdo;
-	/** @var PDOStatement */
-	private $registerRow;
-	/** @var PDOStatement */
-	private $selectServices;
-	/** @var PDOStatement */
-	private $hasService;
-	/** @var PDOStatement */
-	private $getData;
-	/** @var PDOStatement */
-	private $setNextRun;
-	/** @var PDOStatement */
-	private $setTryDate;
-	/** @var PDOStatement */
-	private $setLastRun;
+	private PDO $pdo;
+	private PDOStatement $registerRow;
+	private PDOStatement $selectServices;
+	private PDOStatement $hasService;
+	private PDOStatement $getData;
+	private PDOStatement $setNextRun;
+	private PDOStatement $setTryDate;
+	private PDOStatement $setLastRun;
 
 	/**
 	 * @param PDO $pdo
@@ -114,7 +106,7 @@ class SqliteAttributeRepository implements AttributeRepository {
 		try {
 			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
 			foreach($services as $service) {
-				yield new Service($service['service_key']);
+				yield new Service(key: $service['service_key']);
 			}
 		} finally {
 			$this->selectServices->closeCursor();
