@@ -7,17 +7,14 @@ use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 use PDO;
 
 class SqliteBuilder {
-	/** @var string */
-	private $filename;
-	/** @var MethodInvoker|null */
-	private $methodInvoker;
+	private MethodInvoker|null $methodInvoker = null;
 	
 	/**
 	 * @param string $filename
 	 */
-	public function __construct(string $filename) {
-		$this->filename = $filename;
-	}
+	public function __construct(
+		private readonly string $filename
+	) {}
 	
 	/**
 	 * This can be used to enable automatic provisioning of DI objects when service methods are called. (Autowiring)
