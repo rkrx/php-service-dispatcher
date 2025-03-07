@@ -6,4 +6,5 @@
 !/composer.json
 !/LICENSE
 !/README.md
+!/rector.php
 !/tests.xml
