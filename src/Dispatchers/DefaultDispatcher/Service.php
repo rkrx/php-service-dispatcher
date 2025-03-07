@@ -1,7 +1,9 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 
-class Service {
+use Stringable;
+
+class Service implements Stringable {
 	public function __construct(
 		public readonly string $key
 	) {}
