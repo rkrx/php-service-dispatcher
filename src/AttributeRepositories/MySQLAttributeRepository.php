@@ -38,22 +38,20 @@ class MySQLAttributeRepository implements AttributeRepository {
 	private $pdo;
 	/** @var string[]|null */
 	private $services = null;
-	/** @var string */
-	private $tableName;
-	/** @var array */
-	private $options;
 	
 	/**
 	 * @param PDO $pdo
 	 * @param string $tableName
 	 * @param array $options
 	 */
-	public function __construct(PDO $pdo, $tableName = 'services', array $options = []) {
+	public function __construct(
+		PDO $pdo,
+		private readonly string $tableName = 'services',
+		private readonly array $options = []
+	) {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-		$this->tableName = $tableName;
-		$this->options = $options;
 		$this->pdo = $pdo;
-		if($options['use-locking'] ?? true) {
+		if($this->options['use-locking'] ?? true) {
 			$this->lock = $pdo->prepare('SELECT GET_LOCK(:name, 0)');
 			$this->unlock = $pdo->prepare('SELECT RELEASE_LOCK(:name)');
 		}
@@ -259,9 +257,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 * @return mixed
 	 */
 	private function retry(Closure $fn) {
-		return $this->handleException(function () use ($fn) {
-			return $fn();
-		});
+		return $this->handleException(fn() => $fn());
 	}
 	
 	/**
