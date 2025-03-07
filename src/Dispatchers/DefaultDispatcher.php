@@ -13,27 +13,21 @@ use RuntimeException;
 use Throwable;
 
 class DefaultDispatcher implements Dispatcher {
-	/** @var AttributeRepository */
-	private $attributeRepository;
 	/** @var object[] */
-	private $services = [];
-	/** @var MethodInvoker */
-	private $methodInvoker;
-	/** @var LoggerInterface */
-	private $logger;
-	/** @var array */
-	private $listeners = [];
+	private array $services = [];
+	/** @var array<string, callable[]> */
+	private array $listeners = [];
 	
 	/**
 	 * @param AttributeRepository $attributeRepository
 	 * @param MethodInvoker|null $methodInvoker
 	 * @param LoggerInterface|null $logger
 	 */
-	public function __construct(AttributeRepository $attributeRepository, ?MethodInvoker $methodInvoker = null, ?LoggerInterface $logger = null) {
-		$this->attributeRepository = $attributeRepository;
-		$this->methodInvoker = $methodInvoker;
-		$this->logger = $logger;
-	}
+	public function __construct(
+		private readonly AttributeRepository $attributeRepository,
+		private readonly ?MethodInvoker $methodInvoker = null,
+		private readonly ?LoggerInterface $logger = null
+	) {}
 
 	/**
 	 * @param string $key
@@ -118,9 +112,7 @@ class DefaultDispatcher implements Dispatcher {
 				}
 			} catch (Exception $e) {
 				// Supress exceptions emitted by events
-				if($this->logger !== null) {
-					$this->logger->critical($e->getMessage(), array('exception' => $e));
-				}
+				$this->logger?->critical($e->getMessage(), ['exception' => $e]);
 			}
 		}
 	}
