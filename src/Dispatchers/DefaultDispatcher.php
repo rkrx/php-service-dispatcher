@@ -71,20 +71,20 @@ class DefaultDispatcher implements Dispatcher {
 	public function run(?DateTimeInterface $now = null): int {
 		$dt = $now ?? date_create_immutable();
 		return $this->attributeRepository->lockAndIterateServices($dt, function (Service $service) {
-			if(!array_key_exists($service->getKey(), $this->services)) {
+			if(!array_key_exists($service->key, $this->services)) {
 				return;
 			}
-			$eventParams = ['serviceName' => $service->getKey()];
+			$eventParams = ['serviceName' => $service->key];
 			try {
 				$this->fireEvent('service-start', $eventParams);
-				$serviceData = $this->services[$service->getKey()];
-				$this->attributeRepository->setLastTryDate($service->getKey(), date_create_immutable());
+				$serviceData = $this->services[$service->key];
+				$this->attributeRepository->setLastTryDate($service->key, date_create_immutable());
 				if($this->methodInvoker !== null) {
 					$result = $this->methodInvoker->invoke($serviceData->fn, $eventParams);
 				} else {
 					$result = call_user_func($serviceData->fn, $service);
 				}
-				$this->attributeRepository->setLastRunDate($service->getKey(), date_create_immutable());
+				$this->attributeRepository->setLastRunDate($service->key, date_create_immutable());
 				$nextRunDate = IntervalParser::getNext($serviceData->interval);
 				$this->attributeRepository->setNextRunDate($serviceData->key, $nextRunDate);
 				if($result !== false) {
