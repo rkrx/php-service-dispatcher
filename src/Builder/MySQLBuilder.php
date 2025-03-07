@@ -7,25 +7,21 @@ use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 use PDO;
 
 class MySQLBuilder {
-	/** @var PDO */
-	private $pdo;
 	/** @var MethodInvoker|null */
 	private $methodInvoker;
 	/** @var bool */
 	private $useLocking = true;
 	/** @var string */
 	private $lockPrefix = '';
-	/** @var string */
-	private $tableName;
 	
 	/**
 	 * @param PDO $pdo
 	 * @param string $tableName
 	 */
-	public function __construct(PDO $pdo, string $tableName) {
-		$this->pdo = $pdo;
-		$this->tableName = $tableName;
-	}
+	public function __construct(
+		private readonly PDO $pdo,
+		private readonly string $tableName
+	) {}
 
 	/**
 	 * This can be used to enable automatic provisioning of DI objects when service methods are called. (Autowiring)
