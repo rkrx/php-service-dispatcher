@@ -7,19 +7,18 @@ use Generator;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @phpstan-type TInterval string|int|array<mixed, mixed>
+ */
 class IntervalParser {
 	/**
-	 * @param string|int|array $interval
+	 * @param TInterval $interval
 	 * @param DateTimeInterface|null $now
 	 * @return DateTimeImmutable
 	 */
 	public static function getNext($interval, ?DateTimeInterface $now = null): DateTimeImmutable {
 		if($now === null) {
-			try {
-				$now = new DateTimeImmutable();
-			} catch (Throwable $e) {
-				throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
-			}
+			$now = new DateTimeImmutable();
 		} else {
 			$now = DateTimeHelper::createImmutable($now);
 		}
@@ -31,23 +30,27 @@ class IntervalParser {
 				$result = $date;
 			}
 		}
+		if($result === null) {
+			throw new RuntimeException('No alternative lays in the future');
+		}
 		return $result;
 	}
 	
 	/**
-	 * @param string|array $interval
+	 * @param TInterval $interval
 	 * @param DateTimeImmutable $now
-	 * @return Generator|DateTimeImmutable[]
+	 * @return Generator<DateTimeImmutable>
 	 */
-	private static function parse($interval, DateTimeImmutable $now) {
+	private static function parse($interval, DateTimeImmutable $now): Generator {
 		if(is_array($interval)) {
 			foreach($interval as $inner) {
+				/** @var TInterval $inner */
 				yield from self::parse($inner, $now);
 			}
-		} elseif(preg_match('/^\\d+$/', $interval)) {
-			yield self::parseInt($interval, $now);
+		} elseif(preg_match('{^\\d+$}', (string) $interval)) {
+			yield self::parseInt((int) $interval, $now);
 		} else {
-			yield self::parseString($interval, $now);
+			yield self::parseString((string) $interval, $now);
 		}
 	}
 	
@@ -81,7 +84,7 @@ class IntervalParser {
 	}
 	
 	/**
-	 * @param array $possibleDates
+	 * @param DateTimeImmutable[] $possibleDates
 	 * @param DateTimeImmutable $now
 	 * @return DateTimeImmutable
 	 */

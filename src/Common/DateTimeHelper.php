@@ -19,7 +19,7 @@ abstract class DateTimeHelper {
 			if($init instanceof DateTimeInterface) {
 				return new DateTime($init->format('c'));
 			}
-			return new DateTime($init);
+			return new DateTime($init ?? 'now');
 		} catch (Throwable $e) {
 			throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
 		}
@@ -37,7 +37,7 @@ abstract class DateTimeHelper {
 			if($init instanceof DateTimeInterface) {
 				return new DateTimeImmutable($init->format('c'));
 			}
-			return new DateTimeImmutable($init);
+			return new DateTimeImmutable($init ?? 'now');
 		} catch (Exception $e) {
 			throw new RuntimeException($e->getMessage(), $e->getCode(), $e);
 		}

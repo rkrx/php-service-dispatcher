@@ -1,6 +1,7 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\Dispatchers;
 
+use DateTimeImmutable;
 use DateTimeInterface;
 use Exception;
 use Ioc\MethodInvoker;
@@ -12,8 +13,11 @@ use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @phpstan-import-type TInterval from IntervalParser
+ */
 class DefaultDispatcher implements Dispatcher {
-	/** @var object[] */
+	/** @var array<string, object{key: string, fn: callable(mixed ...$arg): mixed, interval: TInterval}> */
 	private array $services = [];
 	/** @var array<string, callable[]> */
 	private array $listeners = [];
@@ -31,7 +35,7 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @param string $key
-	 * @param string|int|array $interval
+	 * @param TInterval $interval
 	 * @param callable $callable
 	 * @return $this
 	 */
@@ -63,7 +67,8 @@ class DefaultDispatcher implements Dispatcher {
 	 * @return int Number of successfully executed services
 	 */
 	public function run(?DateTimeInterface $now = null): int {
-		$dt = $now ?? date_create_immutable();
+		/** @var DateTimeInterface $dt */
+		$dt = $now ?? new DateTimeImmutable();
 		return $this->attributeRepository->lockAndIterateServices($dt, function (Service $service) {
 			if(!array_key_exists($service->key, $this->services)) {
 				return;
@@ -72,13 +77,13 @@ class DefaultDispatcher implements Dispatcher {
 			try {
 				$this->fireEvent('service-start', $eventParams);
 				$serviceData = $this->services[$service->key];
-				$this->attributeRepository->setLastTryDate($service->key, date_create_immutable());
+				$this->attributeRepository->setLastTryDate($service->key, new DateTimeImmutable());
 				if($this->methodInvoker !== null) {
 					$result = $this->methodInvoker->invoke($serviceData->fn, $eventParams);
 				} else {
 					$result = call_user_func($serviceData->fn, $service);
 				}
-				$this->attributeRepository->setLastRunDate($service->key, date_create_immutable());
+				$this->attributeRepository->setLastRunDate($service->key, new DateTimeImmutable());
 				$nextRunDate = IntervalParser::getNext($serviceData->interval);
 				$this->attributeRepository->setNextRunDate($serviceData->key, $nextRunDate);
 				if($result !== false) {
@@ -98,9 +103,9 @@ class DefaultDispatcher implements Dispatcher {
 
 	/**
 	 * @param string $event
-	 * @param array $params
+	 * @param array<string, mixed> $params
 	 */
-	private function fireEvent(string $event, array $params) {
+	private function fireEvent(string $event, array $params): void {
 		if(array_key_exists($event, $this->listeners)) {
 			try {
 				foreach($this->listeners[$event] as $listener) {

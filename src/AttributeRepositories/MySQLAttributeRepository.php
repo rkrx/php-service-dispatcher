@@ -2,6 +2,7 @@
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
 use Closure;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
@@ -42,7 +43,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 	/**
 	 * @param PDO $pdo
 	 * @param string $tableName
-	 * @param array $options
+	 * @param array{use-locking?: bool, lock-prefix?: string} $options
 	 */
 	public function __construct(
 		PDO $pdo,
@@ -72,27 +73,32 @@ class MySQLAttributeRepository implements AttributeRepository {
 	
 	/**
 	 * @param string $key
-	 * @return MySQLAttributeRepository|void
+	 * @return $this
 	 */
 	public function register(string $key) {
-		$this->handleException(function () use ($key) {
+		return $this->handleException(function () use ($key) {
 			if($this->services === null) {
 				if($this->getServiceKeys === null) {
 					$this->getServiceKeys = $this->pdo->prepare("SELECT `service_key` FROM `{$this->tableName}`;");
 				}
 				try {
 					$this->getServiceKeys->execute();
-					$this->services = $this->getServiceKeys->fetchAll(PDO::FETCH_COLUMN);
+					/** @var string[] $serviceNames */
+					$serviceNames = $this->getServiceKeys->fetchAll(PDO::FETCH_COLUMN);
+					$this->services = $serviceNames;
 				} finally {
 					$this->getServiceKeys->closeCursor();
 				}
 			}
+			
 			if(!in_array($key, $this->services, true)) {
 				if($this->registerRow === null) {
 					$this->registerRow = $this->pdo->prepare("INSERT INTO `{$this->tableName}` (`service_key`) VALUES (:key)");
 				}
 				$this->registerRow->execute(['key' => $key]);
 			}
+			
+			return $this;
 		});
 	}
 
@@ -166,31 +172,33 @@ class MySQLAttributeRepository implements AttributeRepository {
 	 * @return int
 	 */
 	public function lockAndIterateServices(?DateTimeInterface $now, callable $fn): int {
+		$now ??= new DateTimeImmutable();
 		$data = (object) ['count' => 0];
-			$services = $this->fetchServices($now);
-			foreach($services as $service) {
-				try {
-					$this->lock($service->getKey());
-					$fn($service);
-					$data->count++;
-				} finally {
-					$this->unlock($service->getKey());
-				}
+		$services = $this->fetchServices($now);
+		foreach($services as $service) {
+			try {
+				$this->lock($service->key);
+				$fn($service);
+				$data->count++;
+			} finally {
+				$this->unlock($service->key);
 			}
-			return $data->count;
+		}
+		return $data->count;
 	}
 	
 	/**
 	 * @param DateTimeInterface $now
 	 * @return Service[]
 	 */
-	private function fetchServices(DateTimeInterface $now) {
+	private function fetchServices(DateTimeInterface $now): array {
 		if($this->selectOverdueServices === null) {
 			$this->selectOverdueServices = $this->pdo->prepare("SELECT service_key, service_last_try, service_last_run, service_next_run FROM `{$this->tableName}` WHERE IFNULL(service_next_run, DATE('2000-01-01')) <= :dt ORDER BY service_last_try;");
 		}
 		return $this->handleException(function () use ($now) {
 			$this->selectOverdueServices->execute(['dt' => $now->format('Y-m-d H:i:d')]);
 			try {
+				/** @var list<array{service_key: string}> $services */
 				$services = $this->selectOverdueServices->fetchAll(PDO::FETCH_ASSOC);
 				$result = [];
 				foreach($services as $service) {
@@ -229,8 +237,9 @@ class MySQLAttributeRepository implements AttributeRepository {
 	}
 	
 	/**
-	 * @param Closure $fn
-	 * @return mixed
+	 * @template T
+	 * @param Closure(): T $fn
+	 * @return T
 	 */
 	private function handleException(Closure $fn) {
 		try {
@@ -260,14 +269,20 @@ class MySQLAttributeRepository implements AttributeRepository {
 		return $this->handleException(fn() => $fn());
 	}
 	
-	/**
-	 */
-	private function checkIfOldTableVersion() {
-		$serviceNextRunField = $this->pdo->query("SHOW COLUMNS FROM `{$this->tableName}` LIKE 'service_next_run';")->fetchAll(PDO::FETCH_ASSOC);
+	private function checkIfOldTableVersion(): void {
+		$stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->tableName}` LIKE 'service_next_run';");
+		if($stmt === false) {
+			throw new RuntimeException('Could not check if service_next_run field exists');
+		}
+		$serviceNextRunField = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 		if(!count($serviceNextRunField)) {
 			$this->pdo->exec("ALTER TABLE `{$this->tableName}` ADD COLUMN `service_next_run` DATETIME NULL DEFAULT NULL AFTER `service_last_run`;");
-			$serviceTimeoutField = $this->pdo->query("SHOW COLUMNS FROM `{$this->tableName}` LIKE 'service_timeout';")->fetchAll(PDO::FETCH_ASSOC);
+			$stmt = $this->pdo->query("SHOW COLUMNS FROM `{$this->tableName}` LIKE 'service_timeout';");
+			if($stmt === false) {
+				throw new RuntimeException('Could not check if service_timeout field exists');
+			}
+			$serviceTimeoutField = $stmt->fetchAll(PDO::FETCH_ASSOC);
 			if(count($serviceTimeoutField)) {
 				$this->pdo->exec("UPDATE `{$this->tableName}` SET service_next_run = DATE_ADD(service_last_run, INTERVAL service_timeout SECOND)");
 				$this->pdo->exec("ALTER TABLE `{$this->tableName}` DROP COLUMN `service_timeout`;");

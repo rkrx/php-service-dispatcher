@@ -5,6 +5,7 @@
 !/.travis.yml
 !/composer.json
 !/LICENSE
+!/phpstan.neon
 !/README.md
 !/rector.php
 !/tests.xml

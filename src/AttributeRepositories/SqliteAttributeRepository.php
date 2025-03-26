@@ -60,10 +60,11 @@ class SqliteAttributeRepository implements AttributeRepository {
 	
 	/**
 	 * @param string $key
-	 * @return SqliteAttributeRepository|void
+	 * @return $this
 	 */
 	public function register(string $key) {
 		$this->registerRow->execute(['key' => $key]);
+		return $this;
 	}
 
 	/**
@@ -104,6 +105,7 @@ class SqliteAttributeRepository implements AttributeRepository {
 	public function fetchServices(DateTimeInterface $now): Generator {
 		$this->selectServices->execute(['dt' => $now->format(self::SQLITE_DATETIME_FORMAT)]);
 		try {
+			/** @var iterable<array{service_key: string}> $services */
 			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
 			foreach($services as $service) {
 				yield new Service(key: $service['service_key']);
@@ -118,7 +120,12 @@ class SqliteAttributeRepository implements AttributeRepository {
 	 * @param string $statement
 	 */
 	private function migrate(int $version, string $statement): void {
-		$currentVersion = (int) $this->pdo->query('PRAGMA user_version')->fetchColumn(0);
+		/** @var PDOStatement|false $stmt */
+		$stmt = $this->pdo->query('PRAGMA user_version');
+		if($stmt === false) {
+			throw new RuntimeException('Failed to get user_version');
+		}
+		$currentVersion = (int) $stmt->fetchColumn(0);
 		if($currentVersion < $version) {
 			$this->pdo->exec($statement);
 			$this->pdo->exec("PRAGMA user_version={$version}");
