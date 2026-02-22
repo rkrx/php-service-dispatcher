@@ -26,6 +26,7 @@ class SqliteAttributeRepository implements AttributeRepository {
 	 */
 	public function __construct(PDO $pdo) {
 		$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+		$pdo->exec('PRAGMA busy_timeout=5000;');
 		$this->pdo = $pdo;
 		
 		// https://stackoverflow.com/a/8442173
@@ -125,7 +126,11 @@ class SqliteAttributeRepository implements AttributeRepository {
 		if($stmt === false) {
 			throw new RuntimeException('Failed to get user_version');
 		}
-		$currentVersion = (int) $stmt->fetchColumn(0);
+		try {
+			$currentVersion = (int) $stmt->fetchColumn(0);
+		} finally {
+			$stmt->closeCursor();
+		}
 		if($currentVersion < $version) {
 			$this->pdo->exec($statement);
 			$this->pdo->exec("PRAGMA user_version={$version}");
