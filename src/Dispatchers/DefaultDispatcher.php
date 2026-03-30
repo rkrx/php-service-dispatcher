@@ -80,6 +80,7 @@ class DefaultDispatcher implements Dispatcher {
 			];
 			try {
 				$this->fireEvent('service-start', $eventParams);
+				$timer = microtime(true);
 				$this->attributeRepository->setLastTryDate($serviceData->key, new DateTimeImmutable());
 				if($this->methodInvoker !== null) {
 					$result = $this->methodInvoker->invoke($serviceData->fn, $eventParams);
@@ -90,6 +91,7 @@ class DefaultDispatcher implements Dispatcher {
 				$nextRunDate = IntervalParser::getNext($serviceData->interval);
 				$this->attributeRepository->setNextRunDate($serviceData->key, $nextRunDate);
 				if($result !== false) {
+					$eventParams['executionTime'] = microtime(true) - $timer;
 					$this->fireEvent('service-success', $eventParams);
 				}
 			} catch (Throwable $e) {
