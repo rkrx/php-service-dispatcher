@@ -74,7 +74,6 @@ class DefaultDispatcher implements Dispatcher {
 			}
 			$serviceData = $this->services[$serviceKey];
 			$eventParams = [
-				'service' => $serviceKey,
 				'serviceName' => $serviceData->key,
 				'interval' => $serviceData->interval
 			];
