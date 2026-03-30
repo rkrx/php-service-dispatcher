@@ -13,6 +13,7 @@
 		"dragonmantank/cron-expression": ">= 3"
 	},
 	"require-dev": {
+		"rkr/php-di-ioc-adapter": "^7.0@stable",
 		"phpunit/phpunit": ">=7 <9",
 		"phpstan/phpstan": ">= 0.1",
 		"rector/rector": "^2.0"
@@ -28,6 +29,7 @@
 		}
 	},
 	"scripts": {
-		"phpstan": "phpstan analyse -c phpstan.neon src"
+		"phpstan": "phpstan analyse -c phpstan.neon src",
+		"phpunit": "phpunit -c tests.xml"
 	}
 }

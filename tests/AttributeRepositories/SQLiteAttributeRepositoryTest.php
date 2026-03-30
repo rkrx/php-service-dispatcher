@@ -1,16 +1,18 @@
 <?php
 namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 
+use DateTimeImmutable;
 use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher;
 use Kir\Services\Cmd\Dispatcher\ServiceDispatcherBuilder;
 use PDO;
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
 class SQLiteAttributeRepositoryTest extends TestCase {
-	public function testSetLastTryDate() {
+	public function testSetLastTryDate(): void {
 		$repository = $this->getRepos();
 		$repository->register('xx');
-		$repository->setLastTryDate('xx', date_create_immutable());
+		$repository->setLastTryDate('xx', new DateTimeImmutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
 		self::assertNotNull($row->service_last_try);
@@ -18,10 +20,10 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		self::assertNull($row->service_next_run);
 	}
 	
-	public function testSetLastRunDate() {
+	public function testSetLastRunDate(): void {
 		$repository = $this->getRepos();
 		$repository->register('xx');
-		$repository->setLastRunDate('xx', date_create_immutable());
+		$repository->setLastRunDate('xx', new DateTimeImmutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
 		self::assertNull($row->service_last_try);
@@ -29,10 +31,10 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		self::assertNull($row->service_next_run);
 	}
 	
-	public function testSetNextRunDate() {
+	public function testSetNextRunDate(): void {
 		$repository = $this->getRepos();
 		$repository->register('xx');
-		$repository->setNextRunDate('xx', date_create_immutable());
+		$repository->setNextRunDate('xx', new DateTimeImmutable());
 		$row = $repository->getRowByKey('xx');
 		self::assertEquals('xx', $row->service_key ?? null);
 		self::assertNull($row->service_last_try);
@@ -40,7 +42,7 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 		self::assertNotNull($row->service_next_run);
 	}
 	
-	public function testCompleteRun() {
+	public function testCompleteRun(): void {
 		$repository = $this->getRepos();
 		$dp = new DefaultDispatcher($repository);
 		$data = (object) ['run' => false];
@@ -48,19 +50,21 @@ class SQLiteAttributeRepositoryTest extends TestCase {
 			$data->run = true;
 		});
 		$dp->run();
-		self::assertTrue($data->run);
+		self::assertTrue($data->run); // @phpstan-ignore-line
 		$data->run = false;
 		$dp->run();
 		self::assertFalse($data->run);
 		$row = $repository->getRowByKey('test1');
-		self::assertRegExp('/^\\d{4}\\-\\d{2}\\-\\d{2}T03:00:00$/', $row->service_next_run);
+		self::assertRegExp('/^\\d{4}\\-\\d{2}\\-\\d{2}T03:00:00$/', $row->service_next_run ?? '');
 	}
 	
-	public function testAutomaticDatabaseUpgrade() {
+	public function testAutomaticDatabaseUpgrade(): void {
 		copy(__DIR__.'/SQLite/services.db', __DIR__.'/SQLite/services-test.db');
 		ServiceDispatcherBuilder::withSQLite(__DIR__.'/SQLite/services-test.db')->build();
 		$pdo = new PDO(sprintf('sqlite:%s', __DIR__.'/SQLite/services-test.db'));
-		$rows = $pdo->query('SELECT * FROM "services"')->fetchAll(PDO::FETCH_ASSOC);
+		/** @var PDOStatement $statement */
+		$statement = $pdo->query('SELECT * FROM "services"');
+		$rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 		
 		$expectedData = [[
 			'service_key' => 'test1',

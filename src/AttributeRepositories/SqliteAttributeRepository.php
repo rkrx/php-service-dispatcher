@@ -4,7 +4,6 @@ namespace Kir\Services\Cmd\Dispatcher\AttributeRepositories;
 use DateTimeInterface;
 use Generator;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use PDO;
 use PDOStatement;
 use RuntimeException;
@@ -70,11 +69,12 @@ class SqliteAttributeRepository implements AttributeRepository {
 
 	/**
 	 * @param string $key
-	 * @return object
+	 * @return object{service_key: string, service_last_try: null|string, service_last_run: null|string, service_next_run: null|string}
 	 */
 	public function getRowByKey(string $key) {
 		try {
 			$this->getData->execute(['key' => $key]);
+			/** @var null|object{service_key: string, service_last_try: null|string, service_last_run: null|string, service_next_run: null|string} $result */
 			$result = $this->getData->fetchObject();
 			if(!is_object($result)) {
 				throw new RuntimeException('Row not found');
@@ -93,15 +93,15 @@ class SqliteAttributeRepository implements AttributeRepository {
 	public function lockAndIterateServices(DateTimeInterface $now, callable $fn): int {
 		$count = 0;
 		$services = $this->fetchServices($now);
-		foreach($services as $service) {
-			$fn($service);
+		foreach($services as $serviceKey) {
+			$fn($serviceKey);
 		}
 		return $count;
 	}
 	
 	/**
 	 * @param DateTimeInterface $now
-	 * @return Service[]|Generator
+	 * @return string[]|Generator
 	 */
 	public function fetchServices(DateTimeInterface $now): Generator {
 		$this->selectServices->execute(['dt' => $now->format(self::SQLITE_DATETIME_FORMAT)]);
@@ -109,7 +109,7 @@ class SqliteAttributeRepository implements AttributeRepository {
 			/** @var iterable<array{service_key: string}> $services */
 			$services = $this->selectServices->fetchAll(PDO::FETCH_ASSOC);
 			foreach($services as $service) {
-				yield new Service(key: $service['service_key']);
+				yield $service['service_key'];
 			}
 		} finally {
 			$this->selectServices->closeCursor();

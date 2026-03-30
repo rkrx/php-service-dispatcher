@@ -8,7 +8,6 @@ use Ioc\MethodInvoker;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
 use Kir\Services\Cmd\Dispatcher\Common\IntervalParser;
 use Kir\Services\Cmd\Dispatcher\Dispatcher;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
@@ -69,21 +68,25 @@ class DefaultDispatcher implements Dispatcher {
 	public function run(?DateTimeInterface $now = null): int {
 		/** @var DateTimeInterface $dt */
 		$dt = $now ?? new DateTimeImmutable();
-		return $this->attributeRepository->lockAndIterateServices($dt, function (Service $service) {
-			if(!array_key_exists($service->key, $this->services)) {
+		return $this->attributeRepository->lockAndIterateServices($dt, function (string $serviceKey) {
+			if(!array_key_exists($serviceKey, $this->services)) {
 				return;
 			}
-			$eventParams = ['serviceName' => $service->key];
+			$serviceData = $this->services[$serviceKey];
+			$eventParams = [
+				'service' => $serviceKey,
+				'serviceName' => $serviceData->key,
+				'interval' => $serviceData->interval
+			];
 			try {
 				$this->fireEvent('service-start', $eventParams);
-				$serviceData = $this->services[$service->key];
-				$this->attributeRepository->setLastTryDate($service->key, new DateTimeImmutable());
+				$this->attributeRepository->setLastTryDate($serviceData->key, new DateTimeImmutable());
 				if($this->methodInvoker !== null) {
 					$result = $this->methodInvoker->invoke($serviceData->fn, $eventParams);
 				} else {
-					$result = call_user_func($serviceData->fn, $service);
+					$result = call_user_func($serviceData->fn, $eventParams);
 				}
-				$this->attributeRepository->setLastRunDate($service->key, new DateTimeImmutable());
+				$this->attributeRepository->setLastRunDate($serviceData->key, new DateTimeImmutable());
 				$nextRunDate = IntervalParser::getNext($serviceData->interval);
 				$this->attributeRepository->setNextRunDate($serviceData->key, $nextRunDate);
 				if($result !== false) {
@@ -93,9 +96,9 @@ class DefaultDispatcher implements Dispatcher {
 				$eventParams['exception'] = $e;
 				$this->fireEvent('service-failure', $eventParams);
 				if($this->logger !== null) {
-					$this->logger->critical("{$service}: {$e->getMessage()}", ['exception' => $e]);
+					$this->logger->critical("{$eventParams['serviceName']}: {$e->getMessage()}", ['exception' => $e]);
 				} else {
-					throw new RuntimeException("{$service}: {$e->getMessage()}", (int) $e->getCode(), $e);
+					throw new RuntimeException("{$eventParams['serviceName']}: {$e->getMessage()}", (int) $e->getCode(), $e);
 				}
 			}
 		});

@@ -5,7 +5,6 @@ use Closure;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Kir\Services\Cmd\Dispatcher\AttributeRepository;
-use Kir\Services\Cmd\Dispatcher\Dispatchers\DefaultDispatcher\Service;
 use PDO;
 use PDOException;
 use PDOStatement;
@@ -175,13 +174,13 @@ class MySQLAttributeRepository implements AttributeRepository {
 		$now ??= new DateTimeImmutable();
 		$data = (object) ['count' => 0];
 		$services = $this->fetchServices($now);
-		foreach($services as $service) {
+		foreach($services as $serviceKey) {
 			try {
-				$this->lock($service->key);
-				$fn($service);
+				$this->lock($serviceKey);
+				$fn($serviceKey);
 				$data->count++;
 			} finally {
-				$this->unlock($service->key);
+				$this->unlock($serviceKey);
 			}
 		}
 		return $data->count;
@@ -189,7 +188,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 	
 	/**
 	 * @param DateTimeInterface $now
-	 * @return Service[]
+	 * @return string[]
 	 */
 	private function fetchServices(DateTimeInterface $now): array {
 		if($this->selectOverdueServices === null) {
@@ -200,11 +199,7 @@ class MySQLAttributeRepository implements AttributeRepository {
 			try {
 				/** @var list<array{service_key: string}> $services */
 				$services = $this->selectOverdueServices->fetchAll(PDO::FETCH_ASSOC);
-				$result = [];
-				foreach($services as $service) {
-					$result[] = new Service($service['service_key']);
-				}
-				return $result;
+				return array_column($services, 'service_key');
 			} finally {
 				$this->selectOverdueServices->closeCursor();
 			}
